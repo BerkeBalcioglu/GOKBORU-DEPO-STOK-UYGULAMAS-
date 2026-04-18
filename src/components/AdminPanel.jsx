@@ -127,10 +127,6 @@ export default function AdminPanel({ inventory, transactions, emanetler, onUpdat
     try {
       const response = await fetch(webhookUrl.trim(), {
         method: 'GET',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         redirect: 'follow'
       });
       
@@ -151,7 +147,7 @@ export default function AdminPanel({ inventory, transactions, emanetler, onUpdat
       console.error("Çekme hatası:", error);
       setIsSyncing(false);
       setSyncStatus(`❌ Hata: ${error.message}`);
-      alert("HATA: Veri çekilemedi. \n\nOlası Nedenler:\n1. İnternet bağlantısı veya Google Script linki hatalı.\n2. Google Script'te doGet() fonksiyonu düzgün yayınlanmadı.\n3. Tarayıcı eklentileri (AdBlock vb.) bağlantıyı kesiyor.");
+      alert("HATA: Veri çekilemedi. \n\nOlası Nedenler:\n1. Google Script'te yeni versiyon yayınlanmadı.\n2. Link hatalı veya erişim 'Herkes' olarak ayarlanmadı.");
     }
   };
 
