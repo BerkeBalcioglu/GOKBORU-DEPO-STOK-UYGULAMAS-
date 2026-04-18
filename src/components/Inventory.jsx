@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 
-export default function Inventory({ inventory }) {
+export default function Inventory({ inventory, emanetler = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredInventory = inventory.filter(item => 
@@ -46,6 +46,10 @@ export default function Inventory({ inventory }) {
           </thead>
           <tbody>
             {filteredInventory.map(item => {
+              const loanedQty = emanetler
+                .filter(e => e.itemId === item.id && e.status === 'aktif')
+                .reduce((sum, e) => sum + e.amount, 0);
+
               const isCritical = item.quantity < (item.minStock || 5);
               return (
                 <tr key={item.id}>
@@ -64,13 +68,23 @@ export default function Inventory({ inventory }) {
                     </div>
                   </td>
                   <td>
-                    <span style={{ 
-                      fontSize: '1.1rem', 
-                      fontWeight: 600,
-                      color: isCritical ? 'var(--status-red)' : 'var(--status-green)'
-                    }}>
-                      {item.quantity} <span style={{ fontSize: '0.85rem', fontWeight: 'normal' }}>{item.unit || 'Adet'}</span>
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ 
+                        fontSize: '1.1rem', 
+                        fontWeight: 600,
+                        color: isCritical ? 'var(--status-red)' : 'var(--status-green)'
+                      }}>
+                        {item.quantity}
+                      </span>
+                      {loanedQty > 0 && (
+                        <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: '0.9rem' }}>
+                          (-{loanedQty})
+                        </span>
+                      )}
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>
+                        {item.unit || 'Adet'}
+                      </span>
+                    </div>
                   </td>
                   <td>
                     {isCritical ? (

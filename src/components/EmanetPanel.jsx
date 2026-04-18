@@ -330,7 +330,16 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
                               <button onClick={() => onReturn(em.id)} title="İade Edildi İşaretle" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', borderRadius: '6px', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
                                 <ArrowUpFromLine size={14} />
                               </button>
-                              <button onClick={() => onDeduct(em)} title="Geri Dönmeyecek, Stoktan Düş" style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: '6px', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
+                              <button 
+                                onClick={() => {
+                                  const val = em.amount > 1 ? prompt(`${em.itemName} (${em.amount} adet) içinden kaç tanesi zayi oldu / geri dönmeyecek?`, em.amount) : em.amount;
+                                  if (val !== null && val > 0) {
+                                    onDeduct(em, val);
+                                  }
+                                }} 
+                                title="Geri Dönmeyecek, Stoktan Düş" 
+                                style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: '6px', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center' }}
+                              >
                                 <AlertTriangle size={14} />
                               </button>
                             </>

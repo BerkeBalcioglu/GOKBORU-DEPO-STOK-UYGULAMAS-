@@ -253,7 +253,8 @@ function App() {
         quantity: numericAmount,
         minStock: newItemDetails.minStock || 5,
         unit: newItemDetails.unit || 'Adet',
-        location: newItemDetails.location || '-'
+        warehouse: newItemDetails.warehouse || '-',
+        shelf: newItemDetails.shelf || '-'
       };
       
       setInventory(prev => [...prev, newItem]);
@@ -465,11 +466,28 @@ function App() {
   const handleReturnEmanet = (id) => setEmanetler(prev => prev.map(e => e.id === id ? { ...e, status: 'iade', iadeDate: new Date().toISOString() } : e));
   const handleDeleteEmanet = (id) => { if (window.confirm('Bu emanet kaydını silmek istediğinize emin misiniz?')) setEmanetler(prev => prev.filter(e => e.id !== id)); };
   
-  const handleDeductEmanet = (em) => {
-    if (window.confirm(`${em.amount} adet ${em.itemName} stoktan tamamen düşülecektir. İşlemi onaylıyor musunuz?`)) {
-      const success = handleTransaction(em.itemId, 'cikti', em.amount, `Emanetten Düşüm (${em.personName})`);
+  const handleDeductEmanet = (em, deductAmount) => {
+    const amountToDeduct = parseInt(deductAmount) || em.amount;
+    
+    if (window.confirm(`${amountToDeduct} adet ${em.itemName} stoktan tamamen düşülecektir (Kaybolan/Zayi olan ürün). İşlemi onaylıyor musunuz?`)) {
+      const success = handleTransaction(em.itemId, 'cikti', amountToDeduct, `Emanetten Zayi/Düşüm (${em.personName})`);
       if (success) {
-        setEmanetler(prev => prev.map(e => e.id === em.id ? { ...e, status: 'dusuldu', dusumDate: new Date().toISOString() } : e));
+        setEmanetler(prev => prev.map(e => {
+          if (e.id === em.id) {
+            if (amountToDeduct >= e.amount) {
+              // Tamamı düşüldü
+              return { ...e, status: 'dusuldu', dusumDate: new Date().toISOString() };
+            } else {
+              // Kısmi düşüldü, geri kalanı hala aktif emanet
+              return { 
+                ...e, 
+                amount: e.amount - amountToDeduct, 
+                note: (e.note ? e.note + " | " : "") + `${amountToDeduct} adet zayi olarak stoktan düşüldü.` 
+              };
+            }
+          }
+          return e;
+        }));
         alert('Stok başarıyla düşüldü.');
       }
     }
@@ -618,7 +636,7 @@ function App() {
 
         <div className="glass-panel" style={{ padding: '24px', minHeight: 'calc(100vh - 160px)' }}>
           {activeTab === 'dashboard' && <Dashboard inventory={inventory} transactions={transactions} maintenances={maintenances} />}
-          {activeTab === 'inventory' && <Inventory inventory={inventory} />}
+          {activeTab === 'inventory' && <Inventory inventory={inventory} emanetler={emanetler} />}
           {activeTab === 'transaction' && <TransactionForm inventory={inventory} onTransaction={handleTransaction} savedNotes={savedTransactionNotes} setSavedNotes={setSavedTransactionNotes} />}
           {activeTab === 'maintenance' && <MaintenancePanel inventory={inventory} maintenances={maintenances} onAdd={handleAddMaintenance} onUpdate={handleUpdateMaintenance} onDelete={handleDeleteMaintenance} savedNotes={savedMaintenanceNotes} setSavedNotes={setSavedMaintenanceNotes} />}
           {activeTab === 'emanet' && <EmanetPanel inventory={inventory} emanetler={emanetler} onAdd={handleAddEmanet} onReturn={handleReturnEmanet} onDelete={handleDeleteEmanet} onDeduct={handleDeductEmanet} />}
