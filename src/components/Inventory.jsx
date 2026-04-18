@@ -2,19 +2,52 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 
 export default function Inventory({ inventory, emanetler = [] }) {
+  const [categoryFilter, setCategoryFilter] = useState('Hepsi');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredInventory = inventory.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (item.warehouse && item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (item.shelf && item.shelf.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Fixed categories as requested by the user
+  const categories = ['Hepsi', 'Sarf', 'Sarf(gıda)', 'Diğer'];
+
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.warehouse && item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.shelf && item.shelf.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesCategory = categoryFilter === 'Hepsi' || (item.category || 'Diğer') === categoryFilter;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <h3>Stok Durumu</h3>
+        <div>
+          <h3 style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Search size={20} color="var(--accent-blue)" />
+            Stok Durumu
+          </h3>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  border: '1px solid var(--border-color)',
+                  background: categoryFilter === cat ? 'var(--accent-blue)' : 'var(--bg-card)',
+                  color: categoryFilter === cat ? '#fff' : 'var(--text-muted)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
         
         <div style={{ position: 'relative', width: '300px' }}>
           <div style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--text-muted)' }}>
@@ -40,6 +73,7 @@ export default function Inventory({ inventory, emanetler = [] }) {
               <th>Kullanım</th>
               <th>Model</th>
               <th>Konum (Depo/Raf)</th>
+              <th>Kategori</th>
               <th>Miktar</th>
               <th>Durum</th>
             </tr>
@@ -66,6 +100,18 @@ export default function Inventory({ inventory, emanetler = [] }) {
                       <span>📍 {item.warehouse || '-'}</span>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.shelf || '-'}</span>
                     </div>
+                  </td>
+                  <td>
+                    <span style={{ 
+                      fontSize: '0.85rem', 
+                      padding: '4px 8px', 
+                      borderRadius: '6px',
+                      background: item.category === 'Sarf' ? 'rgba(59, 130, 246, 0.1)' : (item.category === 'Sarf(Gıda)' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)'),
+                      color: item.category === 'Sarf' ? 'var(--accent-blue)' : (item.category === 'Sarf(Gıda)' ? 'var(--status-green)' : 'var(--text-muted)'),
+                      border: '1px solid currentColor'
+                    }}>
+                      {item.category || 'Diğer'}
+                    </span>
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

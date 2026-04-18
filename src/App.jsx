@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Package, ArrowRightLeft, History, LayoutDashboard, Download, Upload, Wrench, Undo2, Redo2 } from 'lucide-react';
+import { Package, ArrowRightLeft, History, LayoutDashboard, Download, Upload, Wrench, Undo2, Redo2, Boxes, Move } from 'lucide-react';
 import Inventory from './components/Inventory';
 import TransactionForm from './components/TransactionForm';
 import TransactionHistory from './components/TransactionHistory';
@@ -7,6 +7,8 @@ import Dashboard from './components/Dashboard';
 import AdminPanel from './components/AdminPanel';
 import MaintenancePanel from './components/MaintenancePanel';
 import EmanetPanel from './components/EmanetPanel';
+import TransferPanel from './components/TransferPanel';
+import WarehousePanel from './components/WarehousePanel';
 import { exportToExcel, importFromExcel } from './utils/excelUtils';
 
 // Mock Initial Data
@@ -254,7 +256,8 @@ function App() {
         minStock: newItemDetails.minStock || 5,
         unit: newItemDetails.unit || 'Adet',
         warehouse: newItemDetails.warehouse || '-',
-        shelf: newItemDetails.shelf || '-'
+        shelf: newItemDetails.shelf || '-',
+        category: newItemDetails.category || 'Diğer'
       };
       
       setInventory(prev => [...prev, newItem]);
@@ -267,16 +270,19 @@ function App() {
         return prev.map(item => {
           if (item.id === itemId) {
             itemDetails = { ...item };
+            
+            // Apply category update if provided (intelligent property update)
+            const updatedCategory = newItemDetails?.category || item.category || 'Diğer';
+            
             if (type === 'girdi') {
               success = true;
-              return { ...item, quantity: item.quantity + numericAmount };
+              return { ...item, quantity: item.quantity + numericAmount, category: updatedCategory };
             } else if (type === 'cikti') {
               success = true;
               if (item.quantity < numericAmount) {
-                // Eksiye düşmek yerine sıfırla
                 numericAmount = item.quantity;
               }
-              return { ...item, quantity: item.quantity - numericAmount };
+              return { ...item, quantity: item.quantity - numericAmount, category: updatedCategory };
             }
           }
           return item;
@@ -342,7 +348,6 @@ function App() {
   };
 
   const handleGenerateAutoMaintenance = () => {
-    if (!window.confirm('DİKKAT: Stoktaki kayıtlı cihazlar için son 2 yıla ait otomatik bakım geçmişi üretilecek. Onaylıyor musunuz?')) return;
 
     const newRecords = [];
     const today = new Date();
@@ -363,60 +368,74 @@ function App() {
 
       if (!type) return;
 
-      // Son 2 yıl için (24 ay) her ay kayıt üret
-      for (let i = 1; i <= 24; i++) {
+      // Generate records for the last 24 months
+      for (let i = 0; i <= 24; i++) {
+        // If i=0, it's a "Future/Plan" or "Just done" maintenance for some items
+        // But mainly we generate a history
         const d = new Date();
         d.setMonth(today.getMonth() - i);
         d.setDate(Math.floor(Math.random() * 28) + 1);
 
         let details = "";
         let person = "Depo Sorumlusu";
+        let isMajor = false;
 
         if (type === 'jeneratör') {
-          if (i % 12 === 0) { details = "1. Yıllık Tam Periyodik Bakım\n2. Buji, yağ ve filtre değişimi\n3. Yük testi"; person = "Yetkili Servis"; }
-          else if (i % 6 === 0) details = "1. 6 Aylık bakım\n2. Yağ kontrolü ve filtre temizliği";
-          else if (i % 3 === 0) details = "1. Görsel kontrol\n2. Hava filtresi temizliği\n3. Çalıştırma testi";
-          else details = "Aylık standart test (15 dk) ve akü kontrolü.";
+          if (i === 0 || i === 24) { 
+            details = "2 YILLIK AĞIR BAKIM:\n1. Yağ ve tüm filtrelerin (yağ, yakıt, hava) değişimi\n2. Buji kontrolü ve gerekirse değişimi\n3. Akü voltaj ve asit testi\n4. Yük bankası testi (Load Bank Testing)\n5. Elektrik bağlantıları ve kablo korozyon temizliği"; 
+            person = "Yetkili Teknik Servis";
+            isMajor = true;
+          }
+          else if (i % 6 === 0) details = "Periyodik Kontrol: Yağ seviyesi kontrolü, yakıt kaçağı testi ve 30 dk yükte çalıştırma.";
+          else if (i % 1 === 0) details = "Aylık rutin çalıştırma testi ve genel temizlik.";
         } 
         else if (type === 'kırıcı') {
-          if (i % 12 === 0) { details = "1. Şanzıman yağı değişimi\n2. Kömür değişimi\n3. İzolasyon testi"; person = "Yetkili Servis"; }
-          else if (i % 6 === 0) details = "1. Kömür ve rotor kontrolü\n2. İç mekanik temizlik";
-          else if (i % 3 === 0) details = "1. Uç mandreni yağlaması\n2. Kablo yalıtım kontrolü";
-          else details = "Aylık görsel ve tetik-çalışma kontrolü.";
+          if (i === 0 || i === 24) { 
+            details = "2 YILLIK BÜYÜK REVİZYON:\n1. Şanzıman yağı ve gres yenilemesi\n2. Motor kömürlerinin (fırça) kontrolü ve değişimi\n3. Rotor ve stator temizliği\n4. Mandren ve darbe mekanizması bakımı\n5. İzolasyon direnci ölçümü"; 
+            person = "Bakım Atölyesi";
+            isMajor = true;
+          }
+          else if (i % 4 === 0) details = "Kömür ve kablo bütünlük kontrolü, mandren yağlaması.";
+          else details = "Rutin çalışma testi ve toz temizliği.";
         }
         else if (type === 'testere') {
-          if (i % 12 === 0) { details = "1. Motor tam servis\n2. Buji ve yakıt filtresi değişimi\n3. Karbüratör ayarı"; person = "Yetkili Servis"; }
-          else if (i % 6 === 0) details = "1. Pala temizliği ve yağlaması\n2. Zincir bileme";
-          else if (i % 3 === 0) details = "1. Hava filtresi temizliği\n2. Buji kontrolü";
-          else details = "Aylık zincir gerginlik kontrolü ve 5 dk boşta çalıştırma.";
-        }
-        else if (type === 'makas') {
-          if (i % 12 === 0) details = "1. Mafsal sıkılık testi\n2. Tam söküm ve temizlik";
-          else if (i % 3 === 0) details = "1. Mekanik/hidrolik yağlama\n2. Hareketli parça bakımı";
-          else details = "Aylık ağız açıklığı ve keskinlik kontrolü.";
-        }
-        else if (type === 'aydınlatma') {
-          if (i % 12 === 0) details = "1. Kablo ve soket korozyon temizliği\n2. LED çip kontrolü";
-          else if (i % 3 === 0) details = "Batarya tam deşarj-şarj döngüsü yapıldı.";
-          else details = "Aylık aç-kapa testi ve batarya şarj seviye kontrolü.";
-        }
-        else if (type === 'telsiz') {
-          if (i % 12 === 0) details = "1. Anten değişim kontrolü\n2. Soket oksit temizliği";
-          else if (i % 3 === 0) details = "Batarya tam deşarj-şarj kalibrasyonu yapıldı.";
-          else details = "Aylık PTT / Tuş basım ve sinyal testi.";
+          if (i === 0 || i === 24) { 
+            details = "2 YILLIK MOTOR REVİZYONU:\n1. Buji, yakıt filtresi ve hava filtresi değişimi\n2. Karbüratör diyafram kontrolü ve ayarı\n3. Silindir kompresyon testi\n4. Pala ve zincir dişlisi aşınma kontrolü\n5. Debriyaj ve zincir freni güvenlik testi"; 
+            person = "Teknik Servis";
+            isMajor = true;
+          }
+          else if (i % 3 === 0) details = "Pala temizliği, zincir bileme ve yağlama kanallarının açılması.";
+          else details = "Haftalık/Aylık çalıştırma testi ve zincir gerginlik kontrolü.";
         }
         else if (type === 'yangın') {
-          if (i % 6 === 0) details = "1. Toz çökmesini engellemek için cihaz tersyüz edildi ve çalkalandı.";
-          else details = "Aylık manometre basınç kontrolü ve mühür/pim sağlamlık testi yapıldı.";
+          if (i === 0 || i === 24) {
+            details = "PERİYODİK DOLUM VE TEST:\n1. Hidrostatik basınç testi\n2. İtici gaz (N2) ve toz değişimi\n3. Vana ve hortum bütünlük kontrolü\n4. Mühürleme ve etiketleme";
+            person = "Onaylı Dolum Tesisi";
+            isMajor = true;
+          } else {
+            details = "Aylık basınç (manometre) kontrolü ve cihazı ters-yüz ederek tozun topaklanmasını önleme.";
+          }
         }
-        else if (type === 'çadır') {
-          if (i % 12 === 0) details = "1. Pol (direk) deformasyon testi\n2. Su itici kaplama kontrolü";
-          else if (i % 6 === 0) details = "Kumaş yırtık kontrolü ve fermuar silikon yağlaması yapıldı.";
-          else continue; // Aylık veya 3 aylık bakım yok
+        else if (type === 'telsiz' || type === 'gps') {
+          if (i === 0 || i === 24) {
+            details = "SİSTEM GÜNCELLEME VE KALİBRASYON:\n1. Batarya kapasite testi (Health Check)\n2. Yazılım/Firmware güncellemesi\n3. Anten ve konnektör oksit temizliği\n4. Sinyal güç ve modülasyon testi";
+            isMajor = true;
+          } else if (i % 6 === 0) {
+            details = "Batarya derin deşarj ve tam şarj döngüsü (Kalibrasyon).";
+          } else {
+            details = "Çalışma testi ve fiziksel hasar kontrolü.";
+          }
         }
-        else if (type === 'gps') {
-          if (i % 6 === 0) details = "1. Yazılım ve harita güncellemeleri kontrol edildi.\n2. Pil ve sızdırmazlık kılıfı kontrolü.";
-          else continue; // Sadece 6 ayda bir
+        else {
+          // General 2-year maintenance for other items
+          if (i === 0 || i === 24) {
+            details = "2 YILLIK GENEL MUAYENE: Malzemenin yapısal bütünlüğü, korozyon, çatlak ve aşınma kontrolleri yapıldı. Miadı dolan parçalar yenilendi.";
+            isMajor = true;
+          } else if (i % 12 === 0) {
+            details = "Yıllık standart kontrol ve temizlik.";
+          } else {
+            continue; 
+          }
         }
 
         newRecords.push({
@@ -433,7 +452,7 @@ function App() {
     });
 
     setMaintenances(prev => [...newRecords, ...prev]);
-    alert(`${newRecords.length} adet detaylı otomatik bakım geçmişi başarıyla üretildi!`);
+    console.log(`${newRecords.length} adet detaylı otomatik bakım geçmişi üretildi.`);
   };
 
   const handleExport = () => {
@@ -466,12 +485,85 @@ function App() {
   const handleReturnEmanet = (id) => setEmanetler(prev => prev.map(e => e.id === id ? { ...e, status: 'iade', iadeDate: new Date().toISOString() } : e));
   const handleDeleteEmanet = (id) => { if (window.confirm('Bu emanet kaydını silmek istediğinize emin misiniz?')) setEmanetler(prev => prev.filter(e => e.id !== id)); };
   
-  const handleRestoreData = (data) => {
+   const handleRestoreData = (data) => {
     if (data.inventory) setInventory(data.inventory);
     if (data.transactions) setTransactions(data.transactions);
     if (data.maintenances) setMaintenances(data.maintenances);
     if (data.emanetler) setEmanetler(data.emanetler);
-    alert('Buluttaki veriler başarıyla yerel sisteme çekildi ve güncellendi!');
+    if (data.savedTransactionNotes) setSavedTransactionNotes(data.savedTransactionNotes);
+    if (data.savedMaintenanceNotes) setSavedMaintenanceNotes(data.savedMaintenanceNotes);
+    alert('Buluttaki tüm veriler (notlar dahil) başarıyla yerel sisteme çekildi!');
+  };
+
+  const handleBackup = async () => {
+    const webhookUrl = localStorage.getItem('gkb_google_sheet_url');
+    if (!webhookUrl) {
+      alert("Lütfen önce Yönetici panelinden Google Script URL'sini ayarlayın.");
+      return;
+    }
+    
+    const payload = {
+      inventory,
+      transactions: transactions || [],
+      maintenances: maintenances || [],
+      emanetler: emanetler || [],
+      savedTransactionNotes: savedTransactionNotes || [],
+      savedMaintenanceNotes: savedMaintenanceNotes || []
+    };
+
+    try {
+      await fetch(webhookUrl.trim(), {
+        method: 'POST',
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      alert('✅ Veriler buluta başarıyla yedeklendi!');
+    } catch (error) {
+      alert(`❌ Yedekleme hatası: ${error.message}`);
+    }
+  };
+
+  const handlePull = async () => {
+    const webhookUrl = localStorage.getItem('gkb_google_sheet_url');
+    if (!webhookUrl) { alert("Bağlantı linki eksik."); return; }
+    if (!window.confirm("Buluttaki veriler çekilecek. Mevcut yerel verilerinizin üzerine yazılacak. Onaylıyor musunuz?")) return;
+
+    try {
+      const response = await fetch(webhookUrl.trim());
+      if (!response.ok) throw new Error('Sunucu yanıt vermedi');
+      const data = await response.json();
+      handleRestoreData(data);
+    } catch (error) {
+      alert(`❌ Veri çekme hatası: ${error.message}`);
+    }
+  };
+
+  const handleTransfer = (itemId, targetWarehouse, targetShelf, amount) => {
+    setInventory(prev => prev.map(item => {
+      if (item.id === itemId) {
+        // Transfer logic: update warehouse and shelf
+        // Note: For advanced systems, this could involve creating a transaction log
+        const updatedItem = { ...item, warehouse: targetWarehouse, shelf: targetShelf };
+        
+        // Add to history
+        const newTransaction = {
+          id: Date.now(),
+          itemId: item.id,
+          itemName: item.name,
+          type: 'transfer',
+          amount: amount,
+          date: new Date().toISOString(),
+          note: `${item.warehouse} -> ${targetWarehouse} (${targetShelf})`
+        };
+        setTransactions(txs => [newTransaction, ...txs]);
+        
+        return updatedItem;
+      }
+      return item;
+    }));
+    alert('Transfer işlemi başarıyla tamamlandı.');
+    setActiveTab('warehouses');
   };
 
   const handleDeductEmanet = (em, deductAmount) => {
@@ -504,7 +596,9 @@ function App() {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'inventory', label: 'Stok Durumu', icon: <Package size={20} /> },
+    { id: 'warehouses', label: 'Depo Listesi', icon: <Boxes size={20} /> },
     { id: 'transaction', label: 'Girdi / Çıktı Yap', icon: <ArrowRightLeft size={20} /> },
+    { id: 'transfer', label: 'Depo Transfer', icon: <Move size={20} /> },
     { id: 'emanet', label: 'Emanet Takibi', icon: <ArrowRightLeft size={20} /> },
     { id: 'maintenance', label: 'Bakım Takibi', icon: <Wrench size={20} /> },
     { id: 'history', label: 'İşlem Geçmişi', icon: <History size={20} /> }
@@ -645,11 +739,13 @@ function App() {
         <div className="glass-panel" style={{ padding: '24px', minHeight: 'calc(100vh - 160px)' }}>
           {activeTab === 'dashboard' && <Dashboard inventory={inventory} transactions={transactions} maintenances={maintenances} />}
           {activeTab === 'inventory' && <Inventory inventory={inventory} emanetler={emanetler} />}
-          {activeTab === 'transaction' && <TransactionForm inventory={inventory} onTransaction={handleTransaction} savedNotes={savedTransactionNotes} setSavedNotes={setSavedTransactionNotes} />}
+          {activeTab === 'warehouses' && <WarehousePanel inventory={inventory} />}
+          {activeTab === 'transaction' && <TransactionForm inventory={inventory} onTransaction={handleTransaction} savedNotes={savedTransactionNotes} setSavedNotes={setSavedTransactionNotes} transactions={transactions} />}
+          {activeTab === 'transfer' && <TransferPanel inventory={inventory} onTransfer={handleTransfer} />}
           {activeTab === 'maintenance' && <MaintenancePanel inventory={inventory} maintenances={maintenances} onAdd={handleAddMaintenance} onUpdate={handleUpdateMaintenance} onDelete={handleDeleteMaintenance} savedNotes={savedMaintenanceNotes} setSavedNotes={setSavedMaintenanceNotes} />}
-          {activeTab === 'emanet' && <EmanetPanel inventory={inventory} emanetler={emanetler} onAdd={handleAddEmanet} onReturn={handleReturnEmanet} onDelete={handleDeleteEmanet} onDeduct={handleDeductEmanet} />}
+          {activeTab === 'emanet' && <EmanetPanel inventory={inventory} emanetler={emanetler} onAdd={handleAddEmanet} onReturn={handleReturnEmanet} onDelete={handleDeleteEmanet} onDeduct={handleDeductEmanet} onBackup={handleBackup} onPull={handlePull} />}
           {activeTab === 'history' && <TransactionHistory transactions={transactions} />}
-          {activeTab === 'admin' && <AdminPanel inventory={inventory} transactions={transactions} emanetler={emanetler} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} maintenances={maintenances} onUpdateMaintenance={handleUpdateMaintenance} onDeleteMaintenance={handleDeleteMaintenance} onGenerateAuto={handleGenerateAutoMaintenance} onRestore={handleRestoreData} />}
+          {activeTab === 'admin' && <AdminPanel inventory={inventory} transactions={transactions} emanetler={emanetler} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} maintenances={maintenances} onUpdateMaintenance={handleUpdateMaintenance} onDeleteMaintenance={handleDeleteMaintenance} onGenerateAuto={handleGenerateAutoMaintenance} onRestore={handleRestoreData} savedTransactionNotes={savedTransactionNotes} savedMaintenanceNotes={savedMaintenanceNotes} onUpdateEmanet={ (updated) => setEmanetler(prev => prev.map(e => e.id === updated.id ? updated : e)) } onUpdateTransaction={ (updated) => setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t)) } onDeleteTransaction={ (id) => setTransactions(prev => prev.filter(t => t.id !== id)) } onBackup={handleBackup} onPull={handlePull} />}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Search, PlusCircle, ArrowDownToLine, ArrowUpFromLine, Trash2, User, Package, Hash, Clock, Printer, X, MinusCircle, AlertTriangle } from 'lucide-react';
+import { Search, PlusCircle, ArrowDownToLine, ArrowUpFromLine, Trash2, User, Package, Hash, Clock, Printer, X, MinusCircle, AlertTriangle, CloudUpload, Database } from 'lucide-react';
 
-export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onDelete, onDeduct }) {
+export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onDelete, onDeduct, onBackup, onPull }) {
   const [tab, setTab] = useState('form'); // 'form' | 'list'
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -135,6 +135,15 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
           </div>
           <button onClick={() => { setTab('list'); setTimeout(() => window.print(), 100); }} className="btn" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
             <Printer size={16} /> Yazdır
+          </button>
+          
+          <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+          
+          <button onClick={onBackup} className="btn" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981' }} title="Buluta Yedekle">
+            <Database size={16} /> Yedekle
+          </button>
+          <button onClick={onPull} className="btn" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--accent-blue)' }} title="Buluttan Çek">
+            <CloudUpload size={16} /> Veri Çek
           </button>
         </div>
       </div>

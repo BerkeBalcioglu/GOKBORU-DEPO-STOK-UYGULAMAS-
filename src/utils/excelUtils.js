@@ -16,10 +16,23 @@ export const exportToExcel = (inventory, transactions) => {
 
   const wsInventory = XLSX.utils.json_to_sheet(inventoryData);
 
+  // Warehouse Summary Sheet
+  const warehouses = [...new Set(inventory.map(i => i.warehouse || 'Genel'))];
+  const warehouseData = warehouses.map(wh => {
+    const items = inventory.filter(i => (i.warehouse || 'Genel') === wh);
+    return {
+      'Depo Adı': wh,
+      'Toplam Çeşit': items.length,
+      'Toplam Adet': items.reduce((sum, i) => sum + i.quantity, 0),
+      'Ürünler': items.map(i => i.name).join(', ')
+    };
+  });
+  const wsWarehouses = XLSX.utils.json_to_sheet(warehouseData);
+
   // Transactions Sheet
   const transactionData = transactions.map(tx => ({
     'Tarih': new Date(tx.date).toLocaleString('tr-TR'),
-    'İşlem Tipi': tx.type === 'girdi' ? 'Girdi (+)' : 'Çıktı (-)',
+    'İşlem Tipi': tx.type === 'girdi' ? 'Girdi (+)' : tx.type === 'cikti' ? 'Çıktı (-)' : 'Transfer',
     'Malzeme Adı': tx.itemName,
     'Miktar': tx.amount,
     'Not/Açıklama': tx.note || ''
@@ -29,6 +42,7 @@ export const exportToExcel = (inventory, transactions) => {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, wsInventory, 'Stok Durumu');
+  XLSX.utils.book_append_sheet(wb, wsWarehouses, 'Depo Listesi');
   XLSX.utils.book_append_sheet(wb, wsTransactions, 'İşlem Geçmişi');
 
   XLSX.writeFile(wb, `GOKBORU_Depo_Raporu_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -36,10 +50,7 @@ export const exportToExcel = (inventory, transactions) => {
 
 export const exportMaintenancesToExcel = (maintenances) => {
   const workbook = XLSX.utils.book_new();
-
-  // Group by item name
   const grouped = maintenances.reduce((acc, curr) => {
-    // Make sure sheet name is valid (max 31 chars, no special chars)
     const sheetName = (curr.itemName || 'Bilinmeyen').substring(0, 31).replace(/[\\/?*[\]]/g, '');
     if (!acc[sheetName]) acc[sheetName] = [];
     acc[sheetName].push({
@@ -55,23 +66,12 @@ export const exportMaintenancesToExcel = (maintenances) => {
 
   Object.keys(grouped).forEach(sheetName => {
     const worksheet = XLSX.utils.json_to_sheet(grouped[sheetName]);
-    
-    // Column widths
-    worksheet['!cols'] = [
-      { wch: 15 }, // Tarih
-      { wch: 20 }, // Kod
-      { wch: 30 }, // Adı
-      { wch: 50 }, // İşlemler
-      { wch: 20 }, // Yapan
-      { wch: 15 }  // Sonraki
-    ];
-
+    worksheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   });
 
   if (Object.keys(grouped).length === 0) {
-    const emptySheet = XLSX.utils.json_to_sheet([{ 'Bilgi': 'Henüz bakım kaydı bulunmuyor.' }]);
-    XLSX.utils.book_append_sheet(workbook, emptySheet, 'Bakımlar');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([{ 'Bilgi': 'Kayıt yok' }]), 'Bakımlar');
   }
 
   XLSX.writeFile(workbook, `GOKBORU_Bakim_Raporu_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -104,12 +104,12 @@ export const importFromExcel = (file, currentInventory, callback) => {
         const itemData = {
           code: code || `GKB-${Math.floor(Math.random() * 10000)}`,
           name: name,
-          usage: row['Kullanım Yeri'] || row['Kullanım'] || row['Kategori'] || 'Genel',
+          usage: row['Kullanım Yeri'] || row['Kullanım'] || 'Genel',
           quantity: quantity,
           unit: row['Birim'] || 'Adet',
           model: row['Model'] || '',
           warehouse: row['Depo Yeri'] || row['Depo'] || 'Ana Depo',
-          shelf: row['Raf'] || row['Kabin'] || row['Konum'] || '',
+          shelf: row['Raf'] || row['Kabin'] || '',
           minStock: parseInt(row['Min Stok']) || 5
         };
 
@@ -124,7 +124,7 @@ export const importFromExcel = (file, currentInventory, callback) => {
 
       callback(updatedInventory, stats);
     } catch (error) {
-      alert("Excel dosyası okunurken hata oluştu: " + error.message);
+      alert("Excel hatası: " + error.message);
     }
   };
   reader.readAsArrayBuffer(file);
