@@ -466,6 +466,14 @@ function App() {
   const handleReturnEmanet = (id) => setEmanetler(prev => prev.map(e => e.id === id ? { ...e, status: 'iade', iadeDate: new Date().toISOString() } : e));
   const handleDeleteEmanet = (id) => { if (window.confirm('Bu emanet kaydını silmek istediğinize emin misiniz?')) setEmanetler(prev => prev.filter(e => e.id !== id)); };
   
+  const handleRestoreData = (data) => {
+    if (data.inventory) setInventory(data.inventory);
+    if (data.transactions) setTransactions(data.transactions);
+    if (data.maintenances) setMaintenances(data.maintenances);
+    if (data.emanetler) setEmanetler(data.emanetler);
+    alert('Buluttaki veriler başarıyla yerel sisteme çekildi ve güncellendi!');
+  };
+
   const handleDeductEmanet = (em, deductAmount) => {
     const amountToDeduct = parseInt(deductAmount) || em.amount;
     
@@ -641,7 +649,7 @@ function App() {
           {activeTab === 'maintenance' && <MaintenancePanel inventory={inventory} maintenances={maintenances} onAdd={handleAddMaintenance} onUpdate={handleUpdateMaintenance} onDelete={handleDeleteMaintenance} savedNotes={savedMaintenanceNotes} setSavedNotes={setSavedMaintenanceNotes} />}
           {activeTab === 'emanet' && <EmanetPanel inventory={inventory} emanetler={emanetler} onAdd={handleAddEmanet} onReturn={handleReturnEmanet} onDelete={handleDeleteEmanet} onDeduct={handleDeductEmanet} />}
           {activeTab === 'history' && <TransactionHistory transactions={transactions} />}
-          {activeTab === 'admin' && <AdminPanel inventory={inventory} transactions={transactions} emanetler={emanetler} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} maintenances={maintenances} onUpdateMaintenance={handleUpdateMaintenance} onDeleteMaintenance={handleDeleteMaintenance} onGenerateAuto={handleGenerateAutoMaintenance} />}
+          {activeTab === 'admin' && <AdminPanel inventory={inventory} transactions={transactions} emanetler={emanetler} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} maintenances={maintenances} onUpdateMaintenance={handleUpdateMaintenance} onDeleteMaintenance={handleDeleteMaintenance} onGenerateAuto={handleGenerateAutoMaintenance} onRestore={handleRestoreData} />}
         </div>
       </div>
     </div>

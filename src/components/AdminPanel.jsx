@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, Save, X, Search, Package, Wrench, Zap, CloudUpload, Database } from 'lucide-react';
 
-export default function AdminPanel({ inventory, transactions, emanetler, onUpdate, onDelete, maintenances, onUpdateMaintenance, onDeleteMaintenance, onGenerateAuto }) {
+export default function AdminPanel({ inventory, transactions, emanetler, onUpdate, onDelete, maintenances, onUpdateMaintenance, onDeleteMaintenance, onGenerateAuto, onRestore }) {
   const [adminTab, setAdminTab] = useState('inventory'); // 'inventory' | 'maintenance' | 'backup'
   
   const [editingId, setEditingId] = useState(null);
@@ -111,6 +111,50 @@ export default function AdminPanel({ inventory, transactions, emanetler, onUpdat
     }
   };
 
+  const handlePull = async () => {
+    if (!webhookUrl) {
+      alert("Lütfen önce Google Apps Script Web App linkini yapıştırın.");
+      return;
+    }
+
+    if (!window.confirm("Buluttaki veriler çekilecek ve şu anki yerel verilerinizin üzerine yazılacaktır. Onaylıyor musunuz?")) {
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus('Buluttan veriler alınıyor...');
+
+    try {
+      const response = await fetch(webhookUrl.trim(), {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        redirect: 'follow'
+      });
+      
+      if (!response.ok) throw new Error('Sunucu yanıt vermedi');
+      
+      const data = await response.json();
+      
+      if (!data || (!data.inventory && !data.emanetler)) {
+        throw new Error('Buluttan boş veya geçersiz veri geldi.');
+      }
+
+      onRestore(data);
+      
+      setIsSyncing(false);
+      setSyncStatus('✅ Veriler başarıyla senkronize edildi!');
+      setTimeout(() => setSyncStatus(''), 5000);
+    } catch (error) {
+      console.error("Çekme hatası:", error);
+      setIsSyncing(false);
+      setSyncStatus(`❌ Hata: ${error.message}`);
+      alert("HATA: Veri çekilemedi. \n\nOlası Nedenler:\n1. İnternet bağlantısı veya Google Script linki hatalı.\n2. Google Script'te doGet() fonksiyonu düzgün yayınlanmadı.\n3. Tarayıcı eklentileri (AdBlock vb.) bağlantıyı kesiyor.");
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
@@ -179,23 +223,41 @@ export default function AdminPanel({ inventory, transactions, emanetler, onUpdat
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>* Geliştiricinizden aldığınız bağlantıyı buraya yapıştırın. Sistem bunu otomatik hatırlar.</span>
           </div>
 
-          <button 
-            onClick={handleBackup} 
-            disabled={isSyncing || !webhookUrl}
-            className="btn" 
-            style={{ 
-              width: '100%', 
-              padding: '16px', 
-              background: isSyncing ? 'var(--text-muted)' : '#10b981', 
-              color: '#fff', 
-              fontSize: '1.05rem',
-              justifyContent: 'center',
-              boxShadow: isSyncing ? 'none' : '0 4px 14px rgba(16,185,129,0.4)'
-            }}
-          >
-            <Database size={20} /> 
-            {isSyncing ? 'Yedekleniyor, Lütfen Bekleyin...' : 'Şimdi Google Sheets\'e Yedekle'}
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <button 
+              onClick={handleBackup} 
+              disabled={isSyncing || !webhookUrl}
+              className="btn" 
+              style={{ 
+                padding: '16px', 
+                background: isSyncing ? 'var(--text-muted)' : '#10b981', 
+                color: '#fff', 
+                fontSize: '1rem',
+                justifyContent: 'center',
+                boxShadow: isSyncing ? 'none' : '0 4px 14px rgba(16,185,129,0.3)'
+              }}
+            >
+              <Database size={20} /> 
+              {isSyncing ? 'Yedekle...' : 'Buluta Yedekle (Gönder)'}
+            </button>
+
+            <button 
+              onClick={handlePull} 
+              disabled={isSyncing || !webhookUrl}
+              className="btn" 
+              style={{ 
+                padding: '16px', 
+                background: isSyncing ? 'var(--text-muted)' : 'var(--accent-blue)', 
+                color: '#fff', 
+                fontSize: '1rem',
+                justifyContent: 'center',
+                boxShadow: isSyncing ? 'none' : '0 4px 14px rgba(59,130,246,0.3)'
+              }}
+            >
+              <CloudUpload size={20} style={{ transform: 'rotate(180deg)' }} /> 
+              {isSyncing ? 'Çekiliyor...' : 'Buluttan Çek (Senkronize Et)'}
+            </button>
+          </div>
           
           {syncStatus && (
             <div style={{ 
