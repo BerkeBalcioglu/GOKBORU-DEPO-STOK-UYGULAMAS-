@@ -89,6 +89,14 @@ export default function Inventory({ inventory, emanetler = [] }) {
         return sortDirection === 'asc' ? valA - valB : valB - valA;
       }
 
+      if (sortField === 'location') {
+        const locA = a.locations[0] ? `${a.locations[0].warehouse} ${a.locations[0].shelf}`.toLowerCase() : '';
+        const locB = b.locations[0] ? `${b.locations[0].warehouse} ${b.locations[0].shelf}`.toLowerCase() : '';
+        if (locA < locB) return sortDirection === 'asc' ? -1 : 1;
+        if (locA > locB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      }
+
       return 0;
     });
   }, [groupedInventory, sortField, sortDirection]);
@@ -134,6 +142,27 @@ export default function Inventory({ inventory, emanetler = [] }) {
               }}
             >
               <Clock size={14} /> Son Eklenen
+            </button>
+
+            <button
+              onClick={() => toggleSort('location')}
+              className="hover-bright"
+              style={{
+                padding: '6px 14px',
+                borderRadius: '12px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                border: '1px solid var(--border-color)',
+                background: sortField === 'location' ? 'var(--accent-blue)' : 'rgba(255,255,255,0.05)',
+                color: sortField === 'location' ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginRight: '8px'
+              }}
+            >
+              <ArrowUpDown size={14} /> Konuma Göre
             </button>
             <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 8px' }}></div>
             {categories.map(cat => (
@@ -196,7 +225,15 @@ export default function Inventory({ inventory, emanetler = [] }) {
               </th>
               <th>Kullanım</th>
               <th>Model</th>
-              <th>Konum (Depo/Raf)</th>
+              <th 
+                onClick={() => toggleSort('location')} 
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                className="hover-bright"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Konum (Depo/Raf) <ArrowUpDown size={14} style={{ opacity: sortField === 'location' ? 1 : 0.3 }} />
+                </div>
+              </th>
               <th>Kategori</th>
               <th 
                 onClick={() => toggleSort('quantity')} 

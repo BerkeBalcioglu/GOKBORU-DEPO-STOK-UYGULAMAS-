@@ -17,18 +17,59 @@ export default function AdminPanel({
   const [webhookUrl, setWebhookUrl] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
+  const [sortField, setSortField] = useState('lastUpdated');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   useEffect(() => {
     const savedUrl = localStorage.getItem('gkb_google_sheet_url');
     if (savedUrl) setWebhookUrl(savedUrl);
   }, []);
 
-  const filteredInventory = inventory.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (item.warehouse && item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.warehouse && item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesCategory = !categoryFilter || (item.category || 'Diğer').toLowerCase() === categoryFilter.toLowerCase();
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const sortedInventory = [...filteredInventory].sort((a, b) => {
+    if (sortField === 'lastUpdated') {
+      return sortDirection === 'asc' ? (a.lastUpdated || 0) - (b.lastUpdated || 0) : (b.lastUpdated || 0) - (a.lastUpdated || 0);
+    }
+    if (sortField === 'code') {
+      const valA = (a.code || '').toLowerCase();
+      const valB = (b.code || '').toLowerCase();
+      return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+    if (sortField === 'name') {
+      const valA = (a.name || '').toLowerCase();
+      const valB = (b.name || '').toLowerCase();
+      return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+    if (sortField === 'quantity') {
+      return sortDirection === 'asc' ? a.quantity - b.quantity : b.quantity - a.quantity;
+    }
+    if (sortField === 'location') {
+      const locA = `${a.warehouse || ''} ${a.shelf || ''}`.toLowerCase();
+      const locB = `${b.warehouse || ''} ${b.shelf || ''}`.toLowerCase();
+      return sortDirection === 'asc' ? locA.localeCompare(locB) : locB.localeCompare(locA);
+    }
+    return 0;
+  });
 
   const filteredMaintenances = (maintenances || []).filter(m => 
     m.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,16 +150,50 @@ export default function AdminPanel({
           </div>
           
           {adminTab === 'inventory' && (
-            <select 
-              className="input-field" 
-              style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', width: '130px' }}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            >
-              <option value="">Tüm Kategoriler</option>
-              {[...new Set(inventory.map(item => item.category || 'Diğer'))].map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <>
+              <button
+                onClick={() => {
+                  setSortField('lastUpdated');
+                  setSortDirection('desc');
+                }}
+                className="btn"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  background: sortField === 'lastUpdated' ? 'var(--accent-blue)' : 'rgba(255,255,255,0.05)',
+                  color: sortField === 'lastUpdated' ? '#fff' : 'var(--text-muted)',
+                  border: '1px solid var(--border-color)'
+                }}
+              >
+                Son Eklenen
+              </button>
+              <button
+                onClick={() => toggleSort('location')}
+                className="btn"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  background: sortField === 'location' ? 'var(--accent-blue)' : 'rgba(255,255,255,0.05)',
+                  color: sortField === 'location' ? '#fff' : 'var(--text-muted)',
+                  border: '1px solid var(--border-color)'
+                }}
+              >
+                Konuma Göre
+              </button>
+              <select 
+                className="input-field" 
+                style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', width: '130px' }}
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="">Tüm Kategoriler</option>
+                {[...new Set(inventory.map(item => item.category || 'Diğer'))].map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </>
           )}
 
           {adminTab === 'maintenance' && (
@@ -151,13 +226,25 @@ export default function AdminPanel({
         <div className="table-container">
           <table className="data-table">
             <thead>
-              {adminTab === 'inventory' && <tr><th>Kod</th><th>Malzeme Adı</th><th>Kategori</th><th>Model</th><th>Depo/Raf</th><th>Birim</th><th>Min. Stok</th><th>Mevcut Adet</th><th>İşlemler</th></tr>}
+              {adminTab === 'inventory' && (
+                <tr>
+                  <th onClick={() => toggleSort('code')} style={{ cursor: 'pointer' }}>Kod {sortField === 'code' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Malzeme Adı {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th>Kategori</th>
+                  <th>Model</th>
+                  <th onClick={() => toggleSort('location')} style={{ cursor: 'pointer' }}>Depo/Raf {sortField === 'location' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th>Birim</th>
+                  <th>Min. Stok</th>
+                  <th onClick={() => toggleSort('quantity')} style={{ cursor: 'pointer' }}>Mevcut Adet {sortField === 'quantity' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                  <th>İşlemler</th>
+                </tr>
+              )}
               {adminTab === 'maintenance' && <tr><th>Ürün</th><th>Tarih</th><th>Detay</th><th>Yapan</th><th>İşlem</th></tr>}
               {adminTab === 'emanet' && <tr><th>Kişi</th><th>Ürün</th><th>Adet</th><th>Durum</th><th>İşlem</th></tr>}
               {adminTab === 'history' && <tr><th>Tarih</th><th>Ürün</th><th>Tip</th><th>Miktar</th><th>İşlem</th></tr>}
             </thead>
             <tbody>
-              {adminTab === 'inventory' && filteredInventory.map(item => (
+              {adminTab === 'inventory' && sortedInventory.map(item => (
                 <tr key={item.id}>
                   <td>{editingId === item.id ? <input value={editFormData.code} onChange={e => handleChange(e, 'code')} style={{width:'60px'}} /> : item.code}</td>
                   <td>{editingId === item.id ? <input value={editFormData.name} onChange={e => handleChange(e, 'name')} /> : item.name}</td>
