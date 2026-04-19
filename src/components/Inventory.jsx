@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, ArrowUpDown, Clock } from 'lucide-react';
 
 export default function Inventory({ inventory, emanetler = [] }) {
@@ -7,7 +7,7 @@ export default function Inventory({ inventory, emanetler = [] }) {
   const [sortField, setSortField] = useState('lastUpdated'); // 'lastUpdated' | 'code'
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' | 'desc'
 
-  const categories = ['Hepsi', 'Sarf', 'Sarf(gıda)', 'Diğer'];
+  const categories = ['Hepsi', 'Sarf', 'Sarf(Gıda)', 'Diğer'];
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -18,49 +18,90 @@ export default function Inventory({ inventory, emanetler = [] }) {
     }
   };
 
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (item.warehouse && item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (item.shelf && item.shelf.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = categoryFilter === 'Hepsi' || (item.category || 'Diğer') === categoryFilter;
-    
-    return matchesSearch && matchesCategory;
-  });
+  const filteredInventory = useMemo(() => {
+    return inventory.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.warehouse && item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.shelf && item.shelf.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesCategory = categoryFilter === 'Hepsi' || (item.category || 'Diğer').toLowerCase() === categoryFilter.toLowerCase();
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [inventory, searchTerm, categoryFilter]);
 
-  // Sorting logic
-  const sortedInventory = [...filteredInventory].sort((a, b) => {
-    if (sortField === 'lastUpdated') {
-      const valA = a.lastUpdated || 0;
-      const valB = b.lastUpdated || 0;
-      return sortDirection === 'asc' ? valA - valB : valB - valA;
-    }
-    
-    if (sortField === 'code') {
-      const valA = (a.code || '').toLowerCase();
-      const valB = (b.code || '').toLowerCase();
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+  const groupedInventory = useMemo(() => {
+    const groups = {};
+    filteredInventory.forEach(item => {
+      const key = item.code || item.name;
+      if (!groups[key]) {
+        groups[key] = {
+          ...item,
+          locations: [],
+          totalQuantity: 0,
+          ids: []
+        };
+      }
+      groups[key].locations.push({
+        warehouse: item.warehouse || '-',
+        shelf: item.shelf || '-',
+        quantity: item.quantity,
+        id: item.id
+      });
+      groups[key].totalQuantity += item.quantity;
+      groups[key].ids.push(item.id);
+      
+      if (!groups[key].lastUpdated || (item.lastUpdated && item.lastUpdated > groups[key].lastUpdated)) {
+        groups[key].lastUpdated = item.lastUpdated;
+      }
+    });
+    return Object.values(groups);
+  }, [filteredInventory]);
+
+  const sortedInventory = useMemo(() => {
+    return [...groupedInventory].sort((a, b) => {
+      if (sortField === 'lastUpdated') {
+        const valA = a.lastUpdated || 0;
+        const valB = b.lastUpdated || 0;
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
+      
+      if (sortField === 'code') {
+        const valA = (a.code || '').toLowerCase();
+        const valB = (b.code || '').toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      }
+
+      if (sortField === 'name') {
+        const valA = (a.name || '').toLowerCase();
+        const valB = (b.name || '').toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      }
+
+      if (sortField === 'quantity') {
+        const valA = a.totalQuantity || 0;
+        const valB = b.totalQuantity || 0;
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
+
       return 0;
-    }
+    });
+  }, [groupedInventory, sortField, sortDirection]);
 
-    if (sortField === 'name') {
-      const valA = (a.name || '').toLowerCase();
-      const valB = (b.name || '').toLowerCase();
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    }
-
-    if (sortField === 'quantity') {
-      const valA = a.quantity || 0;
-      const valB = b.quantity || 0;
-      return sortDirection === 'asc' ? valA - valB : valB - valA;
-    }
-
-    return 0;
-  });
+  const loanedMap = useMemo(() => {
+    const map = {};
+    emanetler.forEach(e => {
+      if (e.status === 'aktif') {
+        map[e.itemId] = (map[e.itemId] || 0) + e.amount;
+      }
+    });
+    return map;
+  }, [emanetler]);
 
   return (
     <div>
@@ -69,13 +110,32 @@ export default function Inventory({ inventory, emanetler = [] }) {
           <h3 style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Search size={20} color="var(--accent-blue)" />
             Stok Durumu
-            {sortField === 'lastUpdated' && (
-              <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--accent-blue)', background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px' }}>
-                <Clock size={12} style={{ marginRight: '4px' }} /> Son İşlemler Önde
-              </span>
-            )}
           </h3>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={() => {
+                setSortField('lastUpdated');
+                setSortDirection('desc');
+              }}
+              className="hover-bright"
+              style={{
+                padding: '6px 14px',
+                borderRadius: '12px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                border: '1px solid var(--border-color)',
+                background: sortField === 'lastUpdated' ? 'var(--accent-blue)' : 'rgba(255,255,255,0.05)',
+                color: sortField === 'lastUpdated' ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginRight: '8px'
+              }}
+            >
+              <Clock size={14} /> Son Eklenen
+            </button>
+            <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 8px' }}></div>
             {categories.map(cat => (
               <button
                 key={cat}
@@ -152,14 +212,10 @@ export default function Inventory({ inventory, emanetler = [] }) {
           </thead>
           <tbody>
             {sortedInventory.map(item => {
-
-              const loanedQty = emanetler
-                .filter(e => e.itemId === item.id && e.status === 'aktif')
-                .reduce((sum, e) => sum + e.amount, 0);
-
-              const isCritical = item.quantity < (item.minStock || 5);
+              const loanedQty = item.ids.reduce((sum, id) => sum + (loanedMap[id] || 0), 0);
+              const isCritical = item.totalQuantity < (item.minStock || 5);
               return (
-                <tr key={item.id} style={{ borderLeft: item.lastUpdated ? '3px solid var(--accent-blue)' : '3px solid transparent' }}>
+                <tr key={item.code || item.id} style={{ borderLeft: item.lastUpdated ? '3px solid var(--accent-blue)' : '3px solid transparent' }}>
                   <td style={{ color: 'var(--text-muted)' }}>
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: '6px', display: 'inline-block', fontSize: '0.85rem' }}>
                       {item.code || `#${item.id}`}
@@ -168,10 +224,25 @@ export default function Inventory({ inventory, emanetler = [] }) {
                   <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>{item.name}</td>
                   <td>{item.usage}</td>
                   <td style={{ color: 'var(--text-muted)' }}>{item.model || '-'}</td>
-                  <td style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span>📍 {item.warehouse || '-'}</span>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.shelf || '-'}</span>
+                  <td style={{ color: 'var(--accent-blue)', fontWeight: 500, minWidth: '200px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {item.locations.map((loc, idx) => (
+                        <div key={idx} style={{ 
+                          padding: '4px 8px', 
+                          background: 'rgba(59, 130, 246, 0.05)', 
+                          borderRadius: '6px', 
+                          border: '1px solid rgba(59, 130, 246, 0.1)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <div>
+                            <span style={{ fontSize: '0.85rem' }}>📍 {loc.warehouse}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{loc.shelf}</span>
+                          </div>
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{loc.quantity}</span>
+                        </div>
+                      ))}
                     </div>
                   </td>
                   <td>
@@ -193,7 +264,7 @@ export default function Inventory({ inventory, emanetler = [] }) {
                         fontWeight: 600,
                         color: isCritical ? 'var(--status-red)' : 'var(--status-green)'
                       }}>
-                        {item.quantity}
+                        {item.totalQuantity}
                       </span>
                       {loanedQty > 0 && (
                         <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: '0.9rem' }}>

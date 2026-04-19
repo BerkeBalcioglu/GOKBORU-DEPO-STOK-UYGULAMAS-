@@ -1,25 +1,26 @@
+import React, { useMemo } from 'react';
 import { Package, AlertTriangle, ArrowRightLeft, Wrench } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function Dashboard({ inventory, transactions, maintenances = [] }) {
   const totalItemsType = inventory.length;
-  const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const lowStockItems = inventory.filter(item => item.quantity < (item.minStock || 5));
+  const totalQuantity = useMemo(() => inventory.reduce((sum, item) => sum + item.quantity, 0), [inventory]);
+  const lowStockItems = useMemo(() => inventory.filter(item => item.quantity < (item.minStock || 5)), [inventory]);
   
-  const today = new Date();
-  const upcomingMaintenances = maintenances.filter(m => {
-    if (!m.nextDate) return false;
-    const next = new Date(m.nextDate);
-    const diffTime = next - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    // Overdue or within next 30 days
-    return diffDays <= 30;
-  });
+  const upcomingMaintenances = useMemo(() => {
+    const today = new Date();
+    return maintenances.filter(m => {
+      if (!m.nextDate) return false;
+      const next = new Date(m.nextDate);
+      const diffTime = next - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
+    });
+  }, [maintenances]);
 
-  const recentTransactions = transactions.slice(0, 5);
+  const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
-  // AYLIK BAKIM VERİSİ HESAPLAMA (Son 6 Ay)
-  const getMonthlyData = () => {
+  const chartData = useMemo(() => {
     const data = [];
     const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
     
@@ -40,9 +41,7 @@ export default function Dashboard({ inventory, transactions, maintenances = [] }
       });
     }
     return data;
-  };
-
-  const chartData = getMonthlyData();
+  }, [maintenances]);
 
   return (
     <div>

@@ -3,6 +3,7 @@ const cors = require('cors');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const XLSX = require('xlsx');
 
 const app = express();
 const PORT = 3001;
@@ -10,13 +11,83 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Local backup path
+// Local database path
 const BACKUP_DIR = path.join(__dirname, '../backups');
+const DB_JSON_PATH = path.join(BACKUP_DIR, 'gkb_database.json');
+const DB_EXCEL_PATH = path.join(BACKUP_DIR, 'gkb_database.xlsx');
+
 if (!fs.existsSync(BACKUP_DIR)) {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
 }
 
-// 1. Cloud Backup Proxy (POST)
+// 1. Save Local Database (Automatic)
+app.post('/save-local-db', (req, res) => {
+  const payload = req.body;
+  
+  try {
+    // Save as JSON (Primary Data Store)
+    fs.writeFileSync(DB_JSON_PATH, JSON.stringify(payload, null, 2));
+
+    // Save as Excel (User Accessible Database)
+    const wb = XLSX.utils.book_new();
+
+    // Inventory
+    const invData = (payload.inventory || []).map(item => ({
+      'Kod': item.code || '-',
+      'Adı': item.name,
+      'Kategori': item.category || 'Diğer',
+      'Miktar': item.quantity,
+      'Birim': item.unit || 'Adet',
+      'Depo': item.warehouse || '-',
+      'Raf': item.shelf || '-',
+      'Min Stok': item.minStock || 5
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invData), 'Stok');
+
+    // Transactions
+    const txData = (payload.transactions || []).map(tx => ({
+      'Tarih': tx.date,
+      'Tip': tx.type,
+      'Ürün': tx.itemName,
+      'Miktar': tx.amount,
+      'Not': tx.note || ''
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txData), 'Islemler');
+
+    // Maintenances
+    const mxData = (payload.maintenances || []).map(m => ({
+      'Tarih': m.date,
+      'Ürün': m.itemName,
+      'Detay': m.details,
+      'Yapan': m.person
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mxData), 'Bakimlar');
+
+    XLSX.writeFile(wb, DB_EXCEL_PATH);
+
+    res.json({ success: true, message: 'Veri tabanı başarıyla güncellendi (Excel ve JSON).' });
+  } catch (error) {
+    console.error('Save DB Error:', error.message);
+    res.status(500).json({ success: false, message: 'Yerel kayıt hatası.', error: error.message });
+  }
+});
+
+// 2. Load Local Database
+app.get('/load-local-db', (req, res) => {
+  try {
+    if (fs.existsSync(DB_JSON_PATH)) {
+      const data = fs.readFileSync(DB_JSON_PATH, 'utf8');
+      res.json(JSON.parse(data));
+    } else {
+      res.status(404).json({ success: false, message: 'Veri tabanı henüz oluşturulmamış.' });
+    }
+  } catch (error) {
+    console.error('Load DB Error:', error.message);
+    res.status(500).json({ success: false, message: 'Veri çekme hatası.' });
+  }
+});
+
+// 3. Cloud Backup Proxy (POST)
 app.post('/cloud-backup', async (req, res) => {
   const { url, payload } = req.body;
   
@@ -25,12 +96,9 @@ app.post('/cloud-backup', async (req, res) => {
   }
 
   try {
-    // Also save a local file backup as safety
-    const localFile = path.join(BACKUP_DIR, `local_backup_${new Date().toISOString().slice(0,10)}.json`);
+    const localFile = path.join(BACKUP_DIR, `cloud_snapshot_${new Date().toISOString().slice(0,10)}.json`);
     fs.writeFileSync(localFile, JSON.stringify(payload, null, 2));
 
-    // Proxy to Google Apps Script
-    // We use axios because it handles redirects (302) automatically
     const response = await axios.post(url.trim(), payload, {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -38,7 +106,6 @@ app.post('/cloud-backup', async (req, res) => {
     res.json({ success: true, cloudResponse: response.data });
   } catch (error) {
     console.error('Cloud Backup Error:', error.message);
-    // If Google fails, we still have the local file success
     res.status(500).json({ 
       success: false, 
       message: 'Bulut yedekleme başarısız oldu ancak yerel yedek alındı.',
@@ -47,7 +114,7 @@ app.post('/cloud-backup', async (req, res) => {
   }
 });
 
-// 2. Cloud Pull Proxy (GET)
+// 4. Cloud Pull Proxy (GET)
 app.get('/cloud-pull', async (req, res) => {
   const { url } = req.query;
   
@@ -65,5 +132,5 @@ app.get('/cloud-pull', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`GOKBORU Cloud Proxy running at http://localhost:${PORT}`);
+  console.log(`GOKBORU Database Server running at http://localhost:${PORT}`);
 });

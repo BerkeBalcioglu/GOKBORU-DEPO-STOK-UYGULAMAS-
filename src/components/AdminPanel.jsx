@@ -196,7 +196,7 @@ export default function AdminPanel({
                     )}
                   </td>
                   <td>{editingId === item.id ? <input value={editFormData.model} onChange={e => handleChange(e, 'model')} style={{width:'80px'}} /> : item.model || '-'}</td>
-                  <td>{editingId === item.id ? <div style={{display:'flex',gap:2}}><input value={editFormData.warehouse} onChange={e => handleChange(e, 'warehouse')} style={{width:'60px'}} /><input value={editFormData.shelf} onChange={e => handleChange(e, 'shelf')} style={{width:'40px'}} /></div> : `${item.warehouse} / ${item.shelf}`}</td>
+                  <td>{editingId === item.id ? <div style={{display:'flex',gap:2}}><input value={editFormData.warehouse || ''} onChange={e => handleChange(e, 'warehouse')} style={{width:'60px'}} /><input value={editFormData.shelf || ''} onChange={e => handleChange(e, 'shelf')} style={{width:'40px'}} /></div> : `${item.warehouse || '-'} / ${item.shelf || '-'}`}</td>
                   <td>{editingId === item.id ? <input value={editFormData.unit} onChange={e => handleChange(e, 'unit')} style={{width:'50px'}} /> : item.unit}</td>
                   <td>{editingId === item.id ? <input type="number" value={editFormData.minStock} onChange={e => handleChange(e, 'minStock')} style={{width:'50px'}} /> : item.minStock}</td>
                   <td>{editingId === item.id ? <input type="number" value={editFormData.quantity} onChange={e => handleChange(e, 'quantity')} style={{width:'50px'}} /> : item.quantity}</td>

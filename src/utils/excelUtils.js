@@ -132,3 +132,20 @@ export const importFromExcel = (file, currentInventory, callback) => {
   reader.readAsArrayBuffer(file);
 };
 
+export const exportMaintenancesToExcel = (maintenances) => {
+  const wb = XLSX.utils.book_new();
+  const maintenanceData = maintenances.map(m => ({
+    'Tarih': new Date(m.date).toLocaleDateString('tr-TR'),
+    'Malzeme': m.itemName,
+    'Kod': m.itemCode || '-',
+    'İşlem Detayı': m.details,
+    'Yapan Kişi/Kurum': m.person,
+    'Sonraki Bakım': m.nextDate ? new Date(m.nextDate).toLocaleDateString('tr-TR') : '-'
+  }));
+  const wsMaintenances = XLSX.utils.json_to_sheet(maintenanceData);
+  wsMaintenances['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, wsMaintenances, 'Bakım Geçmişi');
+  XLSX.writeFile(wb, `GOKBORU_Bakim_Listesi_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
+
+

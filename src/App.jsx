@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Package, ArrowRightLeft, History, LayoutDashboard, Download, Upload, Wrench, Undo2, Redo2, Boxes, Move } from 'lucide-react';
 import Inventory from './components/Inventory';
 import TransactionForm from './components/TransactionForm';
@@ -78,142 +78,134 @@ function App() {
   const [canRedo, setCanRedo] = useState(false);
   const isUndoRedo = useRef(false);
 
-  // Load from LocalStorage or use initial
+  // Load from Server or LocalStorage
   useEffect(() => {
-    const savedInventory = localStorage.getItem('akut_inventory');
-    const savedTransactions = localStorage.getItem('akut_transactions');
-    const savedMaintenances = localStorage.getItem('gkb_maintenances');
-    const savedTxNotes = localStorage.getItem('gkb_saved_tx_notes');
-    const savedMxNotes = localStorage.getItem('gkb_saved_mx_notes');
-    const savedEmanetler = localStorage.getItem('gkb_emanetler');
-    
-    if (savedInventory) {
-      const parsed = JSON.parse(savedInventory);
-      if (parsed.length < 10) {
-        setInventory(initialInventoryData);
-      } else {
-        setInventory(parsed);
+    const loadFromServer = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/load-local-db');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.inventory) setInventory(data.inventory);
+          if (data.transactions) setTransactions(data.transactions);
+          if (data.maintenances) setMaintenances(data.maintenances);
+          if (data.savedTransactionNotes) setSavedTransactionNotes(data.savedTransactionNotes);
+          if (data.savedMaintenanceNotes) setSavedMaintenanceNotes(data.savedMaintenanceNotes);
+          if (data.emanetler) setEmanetler(data.emanetler);
+          console.log("Loaded data from local database server.");
+          return true;
+        }
+      } catch (e) {
+        console.warn("Local DB Server not reached, using LocalStorage.");
       }
-    } else {
-      setInventory(initialInventoryData);
-    }
-
-    if (savedTransactions) {
-      setTransactions(JSON.parse(savedTransactions));
-    }
-
-    if (savedMaintenances) {
-      setMaintenances(JSON.parse(savedMaintenances));
-    }
-    if (savedTxNotes) {
-      setSavedTransactionNotes(JSON.parse(savedTxNotes));
-    }
-    if (savedMxNotes) setSavedMaintenanceNotes(JSON.parse(savedMxNotes));
-    if (savedEmanetler) setEmanetler(JSON.parse(savedEmanetler));
-  }, []);
-
-  // Save to LocalStorage on change
-  useEffect(() => {
-    if (inventory.length > 0) {
-      localStorage.setItem('akut_inventory', JSON.stringify(inventory));
-    }
-  }, [inventory]);
-
-  useEffect(() => {
-    if (transactions.length > 0) {
-      localStorage.setItem('akut_transactions', JSON.stringify(transactions));
-    }
-  }, [transactions]);
-
-  useEffect(() => {
-    if (maintenances.length > 0) {
-      localStorage.setItem('gkb_maintenances', JSON.stringify(maintenances));
-    }
-  }, [maintenances]);
-
-  useEffect(() => {
-    localStorage.setItem('gkb_saved_tx_notes', JSON.stringify(savedTransactionNotes));
-  }, [savedTransactionNotes]);
-
-  useEffect(() => { localStorage.setItem('gkb_saved_mx_notes', JSON.stringify(savedMaintenanceNotes)); }, [savedMaintenanceNotes]);
-  useEffect(() => { localStorage.setItem('gkb_emanetler', JSON.stringify(emanetler)); }, [emanetler]);
-
-  // Undo/Redo History Tracker
-  useEffect(() => {
-    if (inventory.length === 0 && transactions.length === 0 && maintenances.length === 0) return; // Prevent saving empty initial states if not loaded
-    
-    if (isUndoRedo.current) {
-      isUndoRedo.current = false;
-      return;
-    }
-
-    const snapshot = {
-      inventory: JSON.parse(JSON.stringify(inventory)),
-      transactions: JSON.parse(JSON.stringify(transactions)),
-      maintenances: JSON.parse(JSON.stringify(maintenances))
+      return false;
     };
 
-    let newHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
+    const loadFromLocal = () => {
+      const load = (key, fallback) => {
+        const saved = localStorage.getItem(key);
+        try { return saved ? JSON.parse(saved) : fallback; } catch { return fallback; }
+      };
+      
+      setInventory(load('akut_inventory', initialInventoryData));
+      setTransactions(load('akut_transactions', []));
+      setMaintenances(load('gkb_maintenances', []));
+      setSavedTransactionNotes(load('gkb_saved_tx_notes', []));
+      setSavedMaintenanceNotes(load('gkb_saved_mx_notes', []));
+      setEmanetler(load('gkb_emanetler', []));
+    };
+
+    loadFromServer().then(success => {
+      if (!success) loadFromLocal();
+    });
+  }, []);
+
+  // Combined Save Effect (Local & Server)
+  useEffect(() => {
+    if (inventory.length === 0) return;
+
+    // 1. LocalStorage
+    localStorage.setItem('akut_inventory', JSON.stringify(inventory));
+    localStorage.setItem('akut_transactions', JSON.stringify(transactions));
+    localStorage.setItem('gkb_maintenances', JSON.stringify(maintenances));
+    localStorage.setItem('gkb_saved_tx_notes', JSON.stringify(savedTransactionNotes));
+    localStorage.setItem('gkb_saved_mx_notes', JSON.stringify(savedMaintenanceNotes));
+    localStorage.setItem('gkb_emanetler', JSON.stringify(emanetler));
+
+    // 2. Server (Automatic Local Excel/JSON DB)
+    const syncWithServer = async () => {
+      try {
+        await fetch('http://localhost:3001/save-local-db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            inventory, transactions, maintenances, 
+            savedTransactionNotes, savedMaintenanceNotes, emanetler 
+          })
+        });
+      } catch (e) {
+        console.warn("Could not sync with local database server.");
+      }
+    };
+    
+    // Use a small timeout to debounce rapid changes if needed, 
+    // but here we just call it.
+    syncWithServer();
+
+  }, [inventory, transactions, maintenances, savedTransactionNotes, savedMaintenanceNotes, emanetler]);
+
+  // Optimized History Tracker
+  useEffect(() => {
+    if (inventory.length === 0) return;
+    if (isUndoRedo.current) { isUndoRedo.current = false; return; }
+
+    const snapshot = { inventory, transactions, maintenances };
+    const newHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
     newHistory.push(snapshot);
-    if (newHistory.length > 30) {
-      newHistory.shift();
-    }
+    if (newHistory.length > 30) newHistory.shift();
+    
     historyRef.current = newHistory;
     historyIndexRef.current = newHistory.length - 1;
-
     setCanUndo(historyIndexRef.current > 0);
     setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
   }, [inventory, transactions, maintenances]);
 
-  const handleUndo = () => {
+  const handleUndo = useCallback(() => {
     if (historyIndexRef.current > 0) {
       isUndoRedo.current = true;
       const currentState = historyRef.current[historyIndexRef.current];
       historyIndexRef.current -= 1;
       const prevState = historyRef.current[historyIndexRef.current];
       
-      // Hangi verinin değiştiğini bul ve o sekmeye git
-      if (JSON.stringify(currentState.maintenances) !== JSON.stringify(prevState.maintenances)) {
-        setActiveTab('maintenance');
-      } else if (JSON.stringify(currentState.transactions) !== JSON.stringify(prevState.transactions)) {
-        setActiveTab('history');
-      } else if (JSON.stringify(currentState.inventory) !== JSON.stringify(prevState.inventory)) {
-        setActiveTab('inventory');
-      }
+      if (JSON.stringify(currentState.maintenances) !== JSON.stringify(prevState.maintenances)) setActiveTab('maintenance');
+      else if (JSON.stringify(currentState.transactions) !== JSON.stringify(prevState.transactions)) setActiveTab('history');
+      else if (JSON.stringify(currentState.inventory) !== JSON.stringify(prevState.inventory)) setActiveTab('inventory');
 
       setInventory(prevState.inventory);
       setTransactions(prevState.transactions);
       setMaintenances(prevState.maintenances);
-      
       setCanUndo(historyIndexRef.current > 0);
-      setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+      setCanRedo(true);
     }
-  };
+  }, []);
 
-  const handleRedo = () => {
+  const handleRedo = useCallback(() => {
     if (historyIndexRef.current < historyRef.current.length - 1) {
       isUndoRedo.current = true;
       const currentState = historyRef.current[historyIndexRef.current];
       historyIndexRef.current += 1;
       const nextState = historyRef.current[historyIndexRef.current];
       
-      // Hangi verinin değiştiğini bul ve o sekmeye git
-      if (JSON.stringify(currentState.maintenances) !== JSON.stringify(nextState.maintenances)) {
-        setActiveTab('maintenance');
-      } else if (JSON.stringify(currentState.transactions) !== JSON.stringify(nextState.transactions)) {
-        setActiveTab('history');
-      } else if (JSON.stringify(currentState.inventory) !== JSON.stringify(nextState.inventory)) {
-        setActiveTab('inventory');
-      }
+      if (JSON.stringify(currentState.maintenances) !== JSON.stringify(nextState.maintenances)) setActiveTab('maintenance');
+      else if (JSON.stringify(currentState.transactions) !== JSON.stringify(nextState.transactions)) setActiveTab('history');
+      else if (JSON.stringify(currentState.inventory) !== JSON.stringify(nextState.inventory)) setActiveTab('inventory');
 
       setInventory(nextState.inventory);
       setTransactions(nextState.transactions);
       setMaintenances(nextState.maintenances);
-      
-      setCanUndo(historyIndexRef.current > 0);
+      setCanUndo(true);
       setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
     }
-  };
+  }, []);
 
   // Klavye kısayolları (Ctrl+Z ve Ctrl+Y)
   useEffect(() => {
@@ -258,7 +250,8 @@ function App() {
         unit: newItemDetails.unit || 'Adet',
         warehouse: newItemDetails.warehouse || '-',
         shelf: newItemDetails.shelf || '-',
-        category: newItemDetails.category || 'Diğer'
+        category: newItemDetails.category || 'Diğer',
+        lastUpdated: Date.now()
       };
       
       nextInventory = [...nextInventory, newItem];
@@ -345,6 +338,7 @@ function App() {
   const handleDeleteMaintenance = (id) => {
     if (window.confirm('Bu bakım kaydını silmek istediğinize emin misiniz?')) {
       setMaintenances(prev => prev.filter(m => m.id !== id));
+      alert('Bakım kaydı silindi.');
     }
   };
 
@@ -453,11 +447,11 @@ function App() {
     });
 
     setMaintenances(prev => [...newRecords, ...prev]);
-    console.log(`${newRecords.length} adet detaylı otomatik bakım geçmişi üretildi.`);
+    alert(`${newRecords.length} adet detaylı otomatik bakım geçmişi üretildi.`);
   };
 
   const handleExport = () => {
-    exportToExcel(inventory, transactions);
+    exportToExcel(inventory, transactions, maintenances, emanetler);
   };
 
   const handleImportClick = () => {
@@ -549,30 +543,62 @@ function App() {
 
 
   const handleTransfer = (itemId, targetWarehouse, targetShelf, amount) => {
-    setInventory(prev => prev.map(item => {
-      if (item.id === itemId) {
-        // Transfer logic: update warehouse and shelf
-        // Note: For advanced systems, this could involve creating a transaction log
-        const updatedItem = { ...item, warehouse: targetWarehouse, shelf: targetShelf };
-        
-        // Add to history
-        const newTransaction = {
-          id: Date.now(),
-          itemId: item.id,
-          itemName: item.name,
-          type: 'transfer',
-          amount: amount,
-          date: new Date().toISOString(),
-          note: `${item.warehouse} -> ${targetWarehouse} (${targetShelf})`
+    let transferSuccess = false;
+    const numericAmount = parseInt(amount);
+
+    setInventory(prev => {
+      const itemToTransfer = prev.find(it => it.id === itemId);
+      if (!itemToTransfer) return prev;
+
+      if (numericAmount >= itemToTransfer.quantity) {
+        // Full transfer: Just update the existing item's location
+        transferSuccess = true;
+        return prev.map(item => {
+          if (item.id === itemId) {
+            return { ...item, warehouse: targetWarehouse, shelf: targetShelf, lastUpdated: Date.now() };
+          }
+          return item;
+        });
+      } else {
+        // Partial transfer: Split the item
+        transferSuccess = true;
+        // 1. Update existing item (reduce quantity)
+        const updatedInventory = prev.map(item => {
+          if (item.id === itemId) {
+            return { ...item, quantity: item.quantity - numericAmount, lastUpdated: Date.now() };
+          }
+          return item;
+        });
+
+        // 2. Add new item entry for the target location
+        const newItemEntry = {
+          ...itemToTransfer,
+          id: Date.now() + Math.random(),
+          quantity: numericAmount,
+          warehouse: targetWarehouse,
+          shelf: targetShelf,
+          lastUpdated: Date.now()
         };
-        setTransactions(txs => [newTransaction, ...txs]);
-        
-        return updatedItem;
+
+        return [...updatedInventory, newItemEntry];
       }
-      return item;
-    }));
-    alert('Transfer işlemi başarıyla tamamlandı.');
-    setActiveTab('warehouses');
+    });
+
+    if (transferSuccess) {
+      const item = inventory.find(it => it.id === itemId);
+      const newTransaction = {
+        id: Date.now(),
+        itemId: itemId,
+        itemName: item?.name || 'Bilinmeyen Ürün',
+        type: 'transfer',
+        amount: numericAmount,
+        date: new Date().toISOString(),
+        note: `${item?.warehouse || '-'} -> ${targetWarehouse} (${targetShelf})`
+      };
+      setTransactions(txs => [newTransaction, ...txs]);
+      alert('Transfer işlemi başarıyla tamamlandı (Ürün bölündü/taşındı).');
+      setActiveTab('warehouses');
+    }
   };
 
   const handleDeductEmanet = (em, deductAmount) => {
