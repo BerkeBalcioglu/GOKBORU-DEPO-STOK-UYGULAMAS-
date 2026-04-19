@@ -1,35 +1,42 @@
 import * as XLSX from 'xlsx';
 
-export const exportToExcel = (inventory, transactions) => {
-  // Inventory Sheet
+export const exportToExcel = (inventory, transactions, maintenances = [], emanetler = []) => {
+  const wb = XLSX.utils.book_new();
+
+  // 1. Inventory Sheet
   const inventoryData = inventory.map(item => ({
     'Ürün Kodu': item.code || '-',
     'Malzeme Adı': item.name,
+    'Kategori': item.category || 'Diğer',
     'Kullanım Yeri': item.usage,
     'Model': item.model || '-',
     'Depo Yeri': item.warehouse || 'Ana Depo',
     'Raf': item.shelf || '-',
     'Stok Miktarı': item.quantity,
     'Birim': item.unit || 'Adet',
-    'Min Stok': item.minStock || 5
+    'Min Stok': item.minStock || 5,
+    'Son İşlem': item.lastUpdated ? new Date(item.lastUpdated).toLocaleString('tr-TR') : '-'
   }));
-
   const wsInventory = XLSX.utils.json_to_sheet(inventoryData);
+  wsInventory['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, wsInventory, 'Stok Durumu');
 
-  // Warehouse Summary Sheet
-  const warehouses = [...new Set(inventory.map(i => i.warehouse || 'Genel'))];
-  const warehouseData = warehouses.map(wh => {
-    const items = inventory.filter(i => (i.warehouse || 'Genel') === wh);
-    return {
-      'Depo Adı': wh,
-      'Toplam Çeşit': items.length,
-      'Toplam Adet': items.reduce((sum, i) => sum + i.quantity, 0),
-      'Ürünler': items.map(i => i.name).join(', ')
-    };
-  });
-  const wsWarehouses = XLSX.utils.json_to_sheet(warehouseData);
+  // 2. Emanetler Sheet (NEW)
+  const emanetData = emanetler.map(em => ({
+    'Kişi Ad Soyad': em.personName,
+    'Bölge/Birim': em.region || '-',
+    'Malzeme Adı': em.itemName,
+    'Kod': em.itemCode || '-',
+    'Adet': em.amount,
+    'Veriliş Tarihi': em.dateStr + ' ' + em.timeStr,
+    'Durum': em.status === 'aktif' ? 'Emanette' : (em.status === 'iade' ? 'İade Edildi' : 'Stoktan Düşüldü'),
+    'Not': em.note || ''
+  }));
+  const wsEmanet = XLSX.utils.json_to_sheet(emanetData);
+  wsEmanet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 30 }];
+  XLSX.utils.book_append_sheet(wb, wsEmanet, 'Emanet Listesi');
 
-  // Transactions Sheet
+  // 3. Transactions Sheet
   const transactionData = transactions.map(tx => ({
     'Tarih': new Date(tx.date).toLocaleString('tr-TR'),
     'İşlem Tipi': tx.type === 'girdi' ? 'Girdi (+)' : tx.type === 'cikti' ? 'Çıktı (-)' : 'Transfer',
@@ -37,44 +44,37 @@ export const exportToExcel = (inventory, transactions) => {
     'Miktar': tx.amount,
     'Not/Açıklama': tx.note || ''
   }));
-
   const wsTransactions = XLSX.utils.json_to_sheet(transactionData);
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, wsInventory, 'Stok Durumu');
-  XLSX.utils.book_append_sheet(wb, wsWarehouses, 'Depo Listesi');
+  wsTransactions['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 40 }];
   XLSX.utils.book_append_sheet(wb, wsTransactions, 'İşlem Geçmişi');
 
-  XLSX.writeFile(wb, `GOKBORU_Depo_Raporu_${new Date().toISOString().slice(0,10)}.xlsx`);
-};
+  // 4. Maintenances Sheet (NEW)
+  const maintenanceData = maintenances.map(m => ({
+    'Tarih': new Date(m.date).toLocaleDateString('tr-TR'),
+    'Malzeme': m.itemName,
+    'Kod': m.itemCode || '-',
+    'İşlem Detayı': m.details,
+    'Yapan Kişi/Kurum': m.person,
+    'Sonraki Bakım': m.nextDate ? new Date(m.nextDate).toLocaleDateString('tr-TR') : '-'
+  }));
+  const wsMaintenances = XLSX.utils.json_to_sheet(maintenanceData);
+  wsMaintenances['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, wsMaintenances, 'Bakım Geçmişi');
 
-export const exportMaintenancesToExcel = (maintenances) => {
-  const workbook = XLSX.utils.book_new();
-  const grouped = maintenances.reduce((acc, curr) => {
-    const sheetName = (curr.itemName || 'Bilinmeyen').substring(0, 31).replace(/[\\/?*[\]]/g, '');
-    if (!acc[sheetName]) acc[sheetName] = [];
-    acc[sheetName].push({
-      'Tarih': new Date(curr.date).toLocaleDateString('tr-TR'),
-      'Malzeme Kodu': curr.itemCode || '-',
-      'Malzeme Adı': curr.itemName || '-',
-      'Yapılan İşlemler': curr.details || '-',
-      'Bakımı Yapan': curr.person || '-',
-      'Sonraki Bakım': curr.nextDate ? new Date(curr.nextDate).toLocaleDateString('tr-TR') : '-'
-    });
-    return acc;
-  }, {});
-
-  Object.keys(grouped).forEach(sheetName => {
-    const worksheet = XLSX.utils.json_to_sheet(grouped[sheetName]);
-    worksheet['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  // 5. Warehouse Summary
+  const warehouses = [...new Set(inventory.map(i => i.warehouse || 'Genel'))];
+  const warehouseData = warehouses.map(wh => {
+    const items = inventory.filter(i => (i.warehouse || 'Genel') === wh);
+    return {
+      'Depo Adı': wh,
+      'Toplam Çeşit': items.length,
+      'Toplam Adet': items.reduce((sum, i) => sum + i.quantity, 0)
+    };
   });
+  const wsWarehouses = XLSX.utils.json_to_sheet(warehouseData);
+  XLSX.utils.book_append_sheet(wb, wsWarehouses, 'Depo Özet');
 
-  if (Object.keys(grouped).length === 0) {
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([{ 'Bilgi': 'Kayıt yok' }]), 'Bakımlar');
-  }
-
-  XLSX.writeFile(workbook, `GOKBORU_Bakim_Raporu_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.writeFile(wb, `GOKBORU_Saha_Yedek_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
 
 export const importFromExcel = (file, currentInventory, callback) => {
@@ -105,12 +105,14 @@ export const importFromExcel = (file, currentInventory, callback) => {
           code: code || `GKB-${Math.floor(Math.random() * 10000)}`,
           name: name,
           usage: row['Kullanım Yeri'] || row['Kullanım'] || 'Genel',
+          category: row['Kategori'] || row['Tür'] || 'Diğer',
           quantity: quantity,
           unit: row['Birim'] || 'Adet',
           model: row['Model'] || '',
           warehouse: row['Depo Yeri'] || row['Depo'] || 'Ana Depo',
           shelf: row['Raf'] || row['Kabin'] || '',
-          minStock: parseInt(row['Min Stok']) || 5
+          minStock: parseInt(row['Min Stok']) || 5,
+          lastUpdated: Date.now()
         };
 
         if (existingIndex >= 0) {
@@ -129,3 +131,4 @@ export const importFromExcel = (file, currentInventory, callback) => {
   };
   reader.readAsArrayBuffer(file);
 };
+

@@ -61,7 +61,12 @@ export default function AdminPanel({
 
   const handleSaveClick = () => {
     if (adminTab === 'inventory') {
-      onUpdate(editFormData);
+      const numericData = {
+        ...editFormData,
+        quantity: parseInt(editFormData.quantity, 10) || 0,
+        minStock: parseInt(editFormData.minStock, 10) || 0
+      };
+      onUpdate(numericData);
     } else if (adminTab === 'maintenance') {
       onUpdateMaintenance(editFormData);
     } else if (adminTab === 'emanet') {
@@ -71,6 +76,7 @@ export default function AdminPanel({
     }
     setEditingId(null);
   };
+
 
   // Replaced by props onBackup and onPull
 

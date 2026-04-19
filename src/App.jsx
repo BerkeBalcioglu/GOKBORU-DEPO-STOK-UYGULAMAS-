@@ -242,7 +242,8 @@ function App() {
     if (isNaN(numericAmount) || numericAmount <= 0) return false;
 
     let success = false;
-    let itemDetails = null;
+    let finalItemDetails = null;
+    let nextInventory = [...inventory];
 
     if (newItemDetails) {
       // Create new item
@@ -253,69 +254,69 @@ function App() {
         usage: newItemDetails.usage,
         model: newItemDetails.model || '',
         quantity: numericAmount,
-        minStock: newItemDetails.minStock || 5,
+        minStock: parseInt(newItemDetails.minStock) || 5,
         unit: newItemDetails.unit || 'Adet',
         warehouse: newItemDetails.warehouse || '-',
         shelf: newItemDetails.shelf || '-',
         category: newItemDetails.category || 'Diğer'
       };
       
-      setInventory(prev => [...prev, newItem]);
-      itemDetails = newItem;
+      nextInventory = [...nextInventory, newItem];
+      finalItemDetails = newItem;
       success = true;
-      type = 'girdi'; // Forcing 'girdi' because it's a new item addition
+      type = 'girdi';
     } else {
       // Existing item transaction
-      setInventory(prev => {
-        return prev.map(item => {
-          if (item.id === itemId) {
-            itemDetails = { ...item };
-            
-            // Apply category update if provided (intelligent property update)
-            const updatedCategory = newItemDetails?.category || item.category || 'Diğer';
-            
-            if (type === 'girdi') {
-              success = true;
-              return { ...item, quantity: item.quantity + numericAmount, category: updatedCategory };
-            } else if (type === 'cikti') {
-              success = true;
-              if (item.quantity < numericAmount) {
-                numericAmount = item.quantity;
-              }
-              return { ...item, quantity: item.quantity - numericAmount, category: updatedCategory };
-            }
-          }
-          return item;
-        });
-      });
+      const itemIdx = nextInventory.findIndex(it => it.id === itemId);
+      if (itemIdx === -1) return false;
+
+      const item = nextInventory[itemIdx];
+      const updatedCategory = newItemDetails?.category || item.category || 'Diğer';
+      
+      if (type === 'girdi') {
+        nextInventory[itemIdx] = { ...item, quantity: item.quantity + numericAmount, category: updatedCategory, lastUpdated: Date.now() };
+        finalItemDetails = nextInventory[itemIdx];
+        success = true;
+      } else if (type === 'cikti') {
+        if (item.quantity < numericAmount) {
+          numericAmount = item.quantity;
+        }
+        if (numericAmount > 0) {
+          nextInventory[itemIdx] = { ...item, quantity: item.quantity - numericAmount, category: updatedCategory, lastUpdated: Date.now() };
+          finalItemDetails = nextInventory[itemIdx];
+          success = true;
+        }
+      }
+
     }
 
-    // Delay transaction log update slightly
-    setTimeout(() => {
-      if (success && itemDetails) {
-        const newTransaction = {
-          id: Date.now(),
-          itemId: itemDetails.id,
-          itemName: itemDetails.name,
-          type: type,
-          amount: numericAmount,
-          date: new Date().toISOString(),
-          note: note || ''
-        };
-        setTransactions(prev => [newTransaction, ...prev]);
-        setActiveTab('inventory');
-      } else if (!success) {
-        alert('İşlem başarısız! Yetersiz stok veya hatalı miktar.');
-      }
-    }, 50);
+    if (success && finalItemDetails) {
+      // ATOMIC UPDATE: We update both states immediately
+      const newTransaction = {
+        id: Date.now(),
+        itemId: finalItemDetails.id,
+        itemName: finalItemDetails.name,
+        type: type,
+        amount: numericAmount,
+        date: new Date().toISOString(),
+        note: note || ''
+      };
 
-    return success;
+      setInventory(nextInventory);
+      setTransactions(prev => [newTransaction, ...prev]);
+      setActiveTab('inventory');
+      return true;
+    }
+
+    return false;
   };
+
 
   const handleUpdateItem = (updatedItem) => {
-    setInventory(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    setInventory(prev => prev.map(item => item.id === updatedItem.id ? { ...updatedItem, lastUpdated: Date.now() } : item));
     alert('Ürün başarıyla güncellendi.');
   };
+
 
   const handleDeleteItem = (itemId) => {
     if(window.confirm('Bu ürünü tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
@@ -512,17 +513,24 @@ function App() {
     };
 
     try {
-      await fetch(webhookUrl.trim(), {
+      // Calling our local proxy instead of direct Google URL
+      const response = await fetch('http://localhost:3001/cloud-backup', {
         method: 'POST',
-        mode: 'no-cors', 
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ url: webhookUrl.trim(), payload })
       });
-      alert('✅ Veriler buluta başarıyla yedeklendi!');
+      
+      const result = await response.json();
+      if (result.success) {
+        alert('✅ Veriler hem yerele hem de buluta başarıyla yedeklendi!');
+      } else {
+        throw new Error(result.message);
+      }
     } catch (error) {
       alert(`❌ Yedekleme hatası: ${error.message}`);
     }
   };
+
 
   const handlePull = async () => {
     const webhookUrl = localStorage.getItem('gkb_google_sheet_url');
@@ -530,7 +538,7 @@ function App() {
     if (!window.confirm("Buluttaki veriler çekilecek. Mevcut yerel verilerinizin üzerine yazılacak. Onaylıyor musunuz?")) return;
 
     try {
-      const response = await fetch(webhookUrl.trim());
+      const response = await fetch(`http://localhost:3001/cloud-pull?url=${encodeURIComponent(webhookUrl.trim())}`);
       if (!response.ok) throw new Error('Sunucu yanıt vermedi');
       const data = await response.json();
       handleRestoreData(data);
@@ -538,6 +546,7 @@ function App() {
       alert(`❌ Veri çekme hatası: ${error.message}`);
     }
   };
+
 
   const handleTransfer = (itemId, targetWarehouse, targetShelf, amount) => {
     setInventory(prev => prev.map(item => {

@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ArrowUpDown, Clock } from 'lucide-react';
 
 export default function Inventory({ inventory, emanetler = [] }) {
   const [categoryFilter, setCategoryFilter] = useState('Hepsi');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState('lastUpdated'); // 'lastUpdated' | 'code'
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' | 'desc'
 
-  // Fixed categories as requested by the user
   const categories = ['Hepsi', 'Sarf', 'Sarf(gıda)', 'Diğer'];
+
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const filteredInventory = inventory.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -19,6 +29,39 @@ export default function Inventory({ inventory, emanetler = [] }) {
     return matchesSearch && matchesCategory;
   });
 
+  // Sorting logic
+  const sortedInventory = [...filteredInventory].sort((a, b) => {
+    if (sortField === 'lastUpdated') {
+      const valA = a.lastUpdated || 0;
+      const valB = b.lastUpdated || 0;
+      return sortDirection === 'asc' ? valA - valB : valB - valA;
+    }
+    
+    if (sortField === 'code') {
+      const valA = (a.code || '').toLowerCase();
+      const valB = (b.code || '').toLowerCase();
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    if (sortField === 'name') {
+      const valA = (a.name || '').toLowerCase();
+      const valB = (b.name || '').toLowerCase();
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    if (sortField === 'quantity') {
+      const valA = a.quantity || 0;
+      const valB = b.quantity || 0;
+      return sortDirection === 'asc' ? valA - valB : valB - valA;
+    }
+
+    return 0;
+  });
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
@@ -26,6 +69,11 @@ export default function Inventory({ inventory, emanetler = [] }) {
           <h3 style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Search size={20} color="var(--accent-blue)" />
             Stok Durumu
+            {sortField === 'lastUpdated' && (
+              <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--accent-blue)', background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px' }}>
+                <Clock size={12} style={{ marginRight: '4px' }} /> Son İşlemler Önde
+              </span>
+            )}
           </h3>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {categories.map(cat => (
@@ -68,25 +116,50 @@ export default function Inventory({ inventory, emanetler = [] }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Ürün Kodu</th>
-              <th>Malzeme Adı</th>
+              <th 
+                onClick={() => toggleSort('code')} 
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                className="hover-bright"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Ürün Kodu <ArrowUpDown size={14} style={{ opacity: sortField === 'code' ? 1 : 0.3 }} />
+                </div>
+              </th>
+              <th 
+                onClick={() => toggleSort('name')} 
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                className="hover-bright"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Malzeme Adı <ArrowUpDown size={14} style={{ opacity: sortField === 'name' ? 1 : 0.3 }} />
+                </div>
+              </th>
               <th>Kullanım</th>
               <th>Model</th>
               <th>Konum (Depo/Raf)</th>
               <th>Kategori</th>
-              <th>Miktar</th>
+              <th 
+                onClick={() => toggleSort('quantity')} 
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                className="hover-bright"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Miktar <ArrowUpDown size={14} style={{ opacity: sortField === 'quantity' ? 1 : 0.3 }} />
+                </div>
+              </th>
               <th>Durum</th>
             </tr>
           </thead>
           <tbody>
-            {filteredInventory.map(item => {
+            {sortedInventory.map(item => {
+
               const loanedQty = emanetler
                 .filter(e => e.itemId === item.id && e.status === 'aktif')
                 .reduce((sum, e) => sum + e.amount, 0);
 
               const isCritical = item.quantity < (item.minStock || 5);
               return (
-                <tr key={item.id}>
+                <tr key={item.id} style={{ borderLeft: item.lastUpdated ? '3px solid var(--accent-blue)' : '3px solid transparent' }}>
                   <td style={{ color: 'var(--text-muted)' }}>
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: '6px', display: 'inline-block', fontSize: '0.85rem' }}>
                       {item.code || `#${item.id}`}
@@ -148,3 +221,4 @@ export default function Inventory({ inventory, emanetler = [] }) {
     </div>
   );
 }
+
