@@ -137,7 +137,14 @@ export default function TransferPanel({ inventory, onTransfer }) {
                   value={targetWarehouse} 
                   onChange={e => setTargetWarehouse(e.target.value)} 
                   style={{ textAlign: 'center', fontWeight: 700 }}
+                  list="warehouse-list-transfer"
                 />
+                <datalist id="warehouse-list-transfer">
+                  {[...new Set(inventory.map(i => i.warehouse))].filter(Boolean).map(wh => (
+                    <option key={wh} value={wh} />
+                  ))}
+                </datalist>
+
                 <input 
                   type="text" 
                   className="input-field" 
@@ -145,7 +152,13 @@ export default function TransferPanel({ inventory, onTransfer }) {
                   value={targetShelf} 
                   onChange={e => setTargetShelf(e.target.value)} 
                   style={{ textAlign: 'center', fontSize: '0.9rem' }}
+                  list="shelf-list-transfer"
                 />
+                <datalist id="shelf-list-transfer">
+                  {[...new Set(inventory.map(i => i.shelf))].filter(Boolean).map(sh => (
+                    <option key={sh} value={sh} />
+                  ))}
+                </datalist>
               </div>
             </div>
 

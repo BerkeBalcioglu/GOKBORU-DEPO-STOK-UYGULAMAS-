@@ -13,52 +13,52 @@ import { exportToExcel, importFromExcel } from './utils/excelUtils';
 
 // Mock Initial Data
 const initialInventoryData = [
-  { id: 1, code: 'GKB-001', name: 'Jeneratör', model: '7.5 kVA', usage: 'Kurtarma', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf A1', minStock: 1 },
-  { id: 2, code: 'GKB-002', name: 'Jeneratör', model: '7.5 kVA', usage: 'Anakamp', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf A1', minStock: 1 },
-  { id: 3, code: 'GKB-003', name: 'Jeneratör', model: '2 kVA (çanta tipi)', usage: 'Anakamp', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf A2', minStock: 1 },
-  { id: 4, code: 'GKB-004', name: 'Ağır Hizmet Kırıcı ve Uçları', model: '16 kg veya Muadil', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf B1', minStock: 2 },
-  { id: 5, code: 'GKB-005', name: 'Kırıcı-Delici ve Uçları', model: '11 kg veya Muadil', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf B1', minStock: 2 },
-  { id: 6, code: 'GKB-006', name: 'Motorlu Testere', model: 'Minimum 50 cm Pala', usage: 'Kurtarma', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf B2', minStock: 1 },
-  { id: 7, code: 'GKB-007', name: 'Balyoz', model: '5 kg', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C1', minStock: 4 },
-  { id: 8, code: 'GKB-008', name: 'Çekiç', model: '2 kg', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C1', minStock: 4 },
-  { id: 9, code: 'GKB-009', name: 'Murç', model: '', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C1', minStock: 2 },
-  { id: 10, code: 'GKB-010', name: 'Topuklu Manivela', model: 'Minimum 150 cm', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C2', minStock: 2 },
-  { id: 11, code: 'GKB-011', name: 'Balta', model: 'Orta Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C2', minStock: 2 },
-  { id: 12, code: 'GKB-012', name: 'Demir Kesme Makası', model: 'Küçük Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C2', minStock: 2 },
-  { id: 13, code: 'GKB-013', name: 'Demir Kesme Makası', model: 'Orta Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C3', minStock: 2 },
-  { id: 14, code: 'GKB-014', name: 'Demir Kesme Makası', model: 'Büyük Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C3', minStock: 2 },
-  { id: 15, code: 'GKB-015', name: 'Kürek', model: 'Kısa Metal Saplı', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D1', minStock: 4 },
-  { id: 16, code: 'GKB-016', name: 'Kürek', model: 'Uzun Ahşap Saplı', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D1', minStock: 4 },
-  { id: 17, code: 'GKB-017', name: 'Kazma', model: 'Ahşap Saplı', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D1', minStock: 2 },
-  { id: 18, code: 'GKB-018', name: 'Kova', model: 'Metal veya Sağlam Kauçuk', usage: 'Kurtarma', quantity: 5, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D2', minStock: 5 },
-  { id: 19, code: 'GKB-019', name: 'LED Aydınlatma', model: 'Bataryalı', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E1', minStock: 4 },
-  { id: 20, code: 'GKB-020', name: 'LED Aydınlatma', model: '50 W Ayaklı', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E1', minStock: 2 },
-  { id: 21, code: 'GKB-021', name: 'Yakıt ve Yağ Hunisi', model: 'Büyük-Orta-Küçük', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E2', minStock: 2 },
-  { id: 22, code: 'GKB-022', name: 'Tamir ve Bakım Alet Çantası', model: 'Gerekli Aletler Dahil', usage: 'Lojistik', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E2', minStock: 1 },
-  { id: 23, code: 'GKB-023', name: 'İlk Yardım Çantası', model: '', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Medikal Depo', shelf: 'Raf F1', minStock: 2 },
-  { id: 24, code: 'GKB-024', name: 'El Telsizi', model: '', usage: 'İletişim', quantity: 8, unit: 'Adet', warehouse: 'İletişim Depo', shelf: 'Raf F1', minStock: 8 },
-  { id: 25, code: 'GKB-025', name: 'GPS veya GAIA Uygulama (Cep)', model: '', usage: 'İletişim', quantity: 2, unit: 'Adet', warehouse: 'İletişim Depo', shelf: 'Raf F1', minStock: 2 },
-  { id: 26, code: 'GKB-026', name: 'Yangın Söndürme Cihazı', model: 'ABC Tozlu', usage: 'Kurtarma', quantity: 10, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf F2', minStock: 10 },
-  { id: 27, code: 'GKB-027', name: 'Hazır Yemek Paketi', model: 'Kişi başı 3 Öğün x Gün', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G1', minStock: 15 },
-  { id: 28, code: 'GKB-028', name: 'Su', model: 'Günlük 3 Litre İçme Suyu', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G1', minStock: 15 },
-  { id: 29, code: 'GKB-029', name: 'Büyük Çay Kazanı', model: '', usage: 'Personel', quantity: 1, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G2', minStock: 1 },
-  { id: 30, code: 'GKB-030', name: 'Yeter Miktarda Çay,Kahve,Bardak', model: '', usage: 'Lojistik', quantity: 1, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G2', minStock: 1 },
-  { id: 31, code: 'GKB-031', name: 'Emniyet Şeridi', model: '', usage: 'Kurtarma', quantity: 3, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf H1', minStock: 3 },
-  { id: 32, code: 'GKB-032', name: 'Megafon', model: '', usage: 'Kurtarma', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf H1', minStock: 1 },
-  { id: 33, code: 'GKB-033', name: 'Sprey Boya', model: 'Farklı Renklerde', usage: 'Kurtarma', quantity: 3, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf H1', minStock: 3 },
-  { id: 34, code: 'GKB-034', name: 'Baret', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 1', minStock: 30 },
-  { id: 35, code: 'GKB-035', name: 'Baret Lambası', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 1', minStock: 30 },
-  { id: 36, code: 'GKB-036', name: 'El Projektörü', model: '', usage: 'Personel', quantity: 8, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 1', minStock: 8 },
-  { id: 37, code: 'GKB-037', name: 'İş Eldiveni', model: '', usage: 'Personel', quantity: 90, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 2', minStock: 90 },
-  { id: 38, code: 'GKB-038', name: 'Göz Koruyucu', model: '', usage: 'Personel', quantity: 60, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 2', minStock: 60 },
-  { id: 39, code: 'GKB-039', name: 'Kulak Koruyucu', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 2', minStock: 30 },
-  { id: 40, code: 'GKB-040', name: 'Solunum Yolu Koruyucu (Maske)', model: '', usage: 'Personel', quantity: 90, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 3', minStock: 90 },
-  { id: 41, code: 'GKB-041', name: 'İş Botu', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 3', minStock: 30 },
-  { id: 42, code: 'GKB-042', name: 'Kıyafet', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 4', minStock: 30 },
-  { id: 43, code: 'GKB-043', name: 'Uyku Tulumu', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 4', minStock: 30 },
-  { id: 44, code: 'GKB-044', name: 'Mat', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 5', minStock: 30 },
-  { id: 45, code: 'GKB-045', name: 'Çadır', model: 'Personel', usage: 'Personel', quantity: 15, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 5', minStock: 15 },
-  { id: 46, code: 'GKB-046', name: 'Farklı Ebatlarda Çadır', model: 'Lojistik ve Yönetim amaçlı', usage: 'Anakamp', quantity: 6, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 5', minStock: 6 }
+  { id: 1, code: 'GKB-001', name: 'Jeneratör', model: '7.5 kVA', usage: 'Kurtarma', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf A1', minStock: 1, category: 'Demirbaş', registrationNumber: 'SCL-001', serialNumber: 'SER-001' },
+  { id: 2, code: 'GKB-002', name: 'Jeneratör', model: '7.5 kVA', usage: 'Anakamp', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf A1', minStock: 1, category: 'Demirbaş', registrationNumber: 'SCL-002', serialNumber: 'SER-002' },
+  { id: 3, code: 'GKB-003', name: 'Jeneratör', model: '2 kVA (çanta tipi)', usage: 'Anakamp', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf A2', minStock: 1, category: 'Demirbaş', registrationNumber: 'SCL-003', serialNumber: 'SER-003' },
+  { id: 4, code: 'GKB-004', name: 'Ağır Hizmet Kırıcı ve Uçları', model: '16 kg veya Muadil', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf B1', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-004', serialNumber: 'SER-004' },
+  { id: 5, code: 'GKB-005', name: 'Kırıcı-Delici ve Uçları', model: '11 kg veya Muadil', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf B1', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-005', serialNumber: 'SER-005' },
+  { id: 6, code: 'GKB-006', name: 'Motorlu Testere', model: 'Minimum 50 cm Pala', usage: 'Kurtarma', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf B2', minStock: 1, category: 'Demirbaş', registrationNumber: 'SCL-006', serialNumber: 'SER-006' },
+  { id: 7, code: 'GKB-007', name: 'Balyoz', model: '5 kg', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C1', minStock: 4, category: 'Demirbaş', registrationNumber: 'SCL-007', serialNumber: 'SER-007' },
+  { id: 8, code: 'GKB-008', name: 'Çekiç', model: '2 kg', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C1', minStock: 4, category: 'Demirbaş', registrationNumber: 'SCL-008', serialNumber: 'SER-008' },
+  { id: 9, code: 'GKB-009', name: 'Murç', model: '', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C1', minStock: 2, category: 'Diğer', registrationNumber: 'SCL-009', serialNumber: 'SER-009' },
+  { id: 10, code: 'GKB-010', name: 'Topuklu Manivela', model: 'Minimum 150 cm', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C2', minStock: 2, category: 'Diğer', registrationNumber: 'SCL-010', serialNumber: 'SER-010' },
+  { id: 11, code: 'GKB-011', name: 'Balta', model: 'Orta Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C2', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-011', serialNumber: 'SER-011' },
+  { id: 12, code: 'GKB-012', name: 'Demir Kesme Makası', model: 'Küçük Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C2', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-012', serialNumber: 'SER-012' },
+  { id: 13, code: 'GKB-013', name: 'Demir Kesme Makası', model: 'Orta Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C3', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-013', serialNumber: 'SER-013' },
+  { id: 14, code: 'GKB-014', name: 'Demir Kesme Makası', model: 'Büyük Boy', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf C3', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-014', serialNumber: 'SER-014' },
+  { id: 15, code: 'GKB-015', name: 'Kürek', model: 'Kısa Metal Saplı', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D1', minStock: 4, category: 'Demirbaş', registrationNumber: 'SCL-015', serialNumber: 'SER-015' },
+  { id: 16, code: 'GKB-016', name: 'Kürek', model: 'Uzun Ahşap Saplı', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D1', minStock: 4, category: 'Demirbaş', registrationNumber: 'SCL-016', serialNumber: 'SER-016' },
+  { id: 17, code: 'GKB-017', name: 'Kazma', model: 'Ahşap Saplı', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D1', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-017', serialNumber: 'SER-017' },
+  { id: 18, code: 'GKB-018', name: 'Kova', model: 'Metal veya Sağlam Kauçuk', usage: 'Kurtarma', quantity: 5, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf D2', minStock: 5, category: 'Demirbaş', registrationNumber: 'SCL-018', serialNumber: 'SER-018' },
+  { id: 19, code: 'GKB-019', name: 'LED Aydınlatma', model: 'Bataryalı', usage: 'Kurtarma', quantity: 4, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E1', minStock: 4, category: 'Demirbaş', registrationNumber: 'SCL-019', serialNumber: 'SER-019' },
+  { id: 20, code: 'GKB-020', name: 'LED Aydınlatma', model: '50 W Ayaklı', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E1', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-020', serialNumber: 'SER-020' },
+  { id: 21, code: 'GKB-021', name: 'Yakıt ve Yağ Hunisi', model: 'Büyük-Orta-Küçük', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E2', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-021', serialNumber: 'SER-021' },
+  { id: 22, code: 'GKB-022', name: 'Tamir ve Bakım Alet Çantası', model: 'Gerekli Aletler Dahil', usage: 'Lojistik', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf E2', minStock: 1, category: 'Demirbaş', registrationNumber: 'SCL-022', serialNumber: 'SER-022' },
+  { id: 23, code: 'GKB-023', name: 'İlk Yardım Çantası', model: '', usage: 'Kurtarma', quantity: 2, unit: 'Adet', warehouse: 'Medikal Depo', shelf: 'Raf F1', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-023', serialNumber: 'SER-023' },
+  { id: 24, code: 'GKB-024', name: 'El Telsizi', model: '', usage: 'İletişim', quantity: 8, unit: 'Adet', warehouse: 'İletişim Depo', shelf: 'Raf F1', minStock: 8, category: 'Demirbaş', registrationNumber: 'SCL-024', serialNumber: 'SER-024' },
+  { id: 25, code: 'GKB-025', name: 'GPS veya GAIA Uygulama (Cep)', model: '', usage: 'İletişim', quantity: 2, unit: 'Adet', warehouse: 'İletişim Depo', shelf: 'Raf F1', minStock: 2, category: 'Demirbaş', registrationNumber: 'SCL-025', serialNumber: 'SER-025' },
+  { id: 26, code: 'GKB-026', name: 'Yangın Söndürme Cihazı', model: 'ABC Tozlu', usage: 'Kurtarma', quantity: 10, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf F2', minStock: 10, category: 'Demirbaş', registrationNumber: 'SCL-026', serialNumber: 'SER-026' },
+  { id: 27, code: 'GKB-027', name: 'Hazır Yemek Paketi', model: 'Kişi başı 3 Öğün x Gün', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G1', minStock: 15, category: 'Sarf(Gıda)', registrationNumber: 'SCL-027', serialNumber: 'SER-027' },
+  { id: 28, code: 'GKB-028', name: 'Su', model: 'Günlük 3 Litre İçme Suyu', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G1', minStock: 15, category: 'Sarf(Gıda)', registrationNumber: 'SCL-028', serialNumber: 'SER-028' },
+  { id: 29, code: 'GKB-029', name: 'Büyük Çay Kazanı', model: '', usage: 'Personel', quantity: 1, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G2', minStock: 1, category: 'Demirbaş', registrationNumber: 'SCL-029', serialNumber: 'SER-029' },
+  { id: 30, code: 'GKB-030', name: 'Yeter Miktarda Çay,Kahve,Bardak', model: '', usage: 'Lojistik', quantity: 1, unit: 'Adet', warehouse: 'Lojistik Depo', shelf: 'Raf G2', minStock: 1, category: 'Sarf(Gıda)', registrationNumber: 'SCL-030', serialNumber: 'SER-030' },
+  { id: 31, code: 'GKB-031', name: 'Emniyet Şeridi', model: '', usage: 'Kurtarma', quantity: 3, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf H1', minStock: 3, category: 'Sarf', registrationNumber: 'SCL-031', serialNumber: 'SER-031' },
+  { id: 32, code: 'GKB-032', name: 'Megafon', model: '', usage: 'Kurtarma', quantity: 1, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf H1', minStock: 1, category: 'Demirbaş', registrationNumber: 'SCL-032', serialNumber: 'SER-032' },
+  { id: 33, code: 'GKB-033', name: 'Sprey Boya', model: 'Farklı Renklerde', usage: 'Kurtarma', quantity: 3, unit: 'Adet', warehouse: 'Ana Depo', shelf: 'Raf H1', minStock: 3, category: 'Sarf', registrationNumber: 'SCL-033', serialNumber: 'SER-033' },
+  { id: 34, code: 'GKB-034', name: 'Baret', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 1', minStock: 30, category: 'Demirbaş', registrationNumber: 'SCL-034', serialNumber: 'SER-034' },
+  { id: 35, code: 'GKB-035', name: 'Baret Lambası', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 1', minStock: 30, category: 'Demirbaş', registrationNumber: 'SCL-035', serialNumber: 'SER-035' },
+  { id: 36, code: 'GKB-036', name: 'El Projektörü', model: '', usage: 'Personel', quantity: 8, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 1', minStock: 8, category: 'Demirbaş', registrationNumber: 'SCL-036', serialNumber: 'SER-036' },
+  { id: 37, code: 'GKB-037', name: 'İş Eldiveni', model: '', usage: 'Personel', quantity: 90, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 2', minStock: 90, category: 'Sarf', registrationNumber: 'SCL-037', serialNumber: 'SER-037' },
+  { id: 38, code: 'GKB-038', name: 'Göz Koruyucu', model: '', usage: 'Personel', quantity: 60, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 2', minStock: 60, category: 'Demirbaş', registrationNumber: 'SCL-038', serialNumber: 'SER-038' },
+  { id: 39, code: 'GKB-039', name: 'Kulak Koruyucu', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 2', minStock: 30, category: 'Demirbaş', registrationNumber: 'SCL-039', serialNumber: 'SER-039' },
+  { id: 40, code: 'GKB-040', name: 'Solunum Yolu Koruyucu (Maske)', model: '', usage: 'Personel', quantity: 90, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 3', minStock: 90, category: 'Sarf', registrationNumber: 'SCL-040', serialNumber: 'SER-040' },
+  { id: 41, code: 'GKB-041', name: 'İş Botu', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 3', minStock: 30, category: 'Demirbaş', registrationNumber: 'SCL-041', serialNumber: 'SER-041' },
+  { id: 42, code: 'GKB-042', name: 'Kıyafet', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 4', minStock: 30, category: 'Demirbaş', registrationNumber: 'SCL-042', serialNumber: 'SER-042' },
+  { id: 43, code: 'GKB-043', name: 'Uyku Tulumu', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 4', minStock: 30, category: 'Demirbaş', registrationNumber: 'SCL-043', serialNumber: 'SER-043' },
+  { id: 44, code: 'GKB-044', name: 'Mat', model: '', usage: 'Personel', quantity: 30, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 5', minStock: 30, category: 'Demirbaş', registrationNumber: 'SCL-044', serialNumber: 'SER-044' },
+  { id: 45, code: 'GKB-045', name: 'Çadır', model: 'Personel', usage: 'Personel', quantity: 15, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 5', minStock: 15, category: 'Demirbaş', registrationNumber: 'SCL-045', serialNumber: 'SER-045' },
+  { id: 46, code: 'GKB-046', name: 'Farklı Ebatlarda Çadır', model: 'Lojistik ve Yönetim amaçlı', usage: 'Anakamp', quantity: 6, unit: 'Adet', warehouse: 'Personel Depo', shelf: 'Kabin 5', minStock: 6, category: 'Demirbaş', registrationNumber: 'SCL-046', serialNumber: 'SER-046' }
 ];
 
 function App() {
@@ -438,6 +438,7 @@ function App() {
           itemId: item.id,
           itemName: item.name,
           itemCode: item.code || '-',
+          registrationNumber: item.registrationNumber || '',
           date: d.toISOString().split('T')[0],
           details: details,
           person: person,
@@ -543,15 +544,26 @@ function App() {
 
 
   const handleTransfer = (itemId, targetWarehouse, targetShelf, amount) => {
-    let transferSuccess = false;
     const numericAmount = parseInt(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) return;
+
+    const itemToTransfer = inventory.find(it => it.id === itemId);
+    if (!itemToTransfer) return;
+
+    if (numericAmount > itemToTransfer.quantity) {
+      alert("Yetersiz miktar!");
+      return;
+    }
+
+    let transferSuccess = false;
 
     setInventory(prev => {
-      const itemToTransfer = prev.find(it => it.id === itemId);
-      if (!itemToTransfer) return prev;
+      // Re-find the item in the current state to be safe
+      const currentItem = prev.find(it => it.id === itemId);
+      if (!currentItem) return prev;
 
-      if (numericAmount >= itemToTransfer.quantity) {
-        // Full transfer: Just update the existing item's location
+      if (numericAmount === currentItem.quantity) {
+        // Full transfer
         transferSuccess = true;
         return prev.map(item => {
           if (item.id === itemId) {
@@ -562,7 +574,7 @@ function App() {
       } else {
         // Partial transfer: Split the item
         transferSuccess = true;
-        // 1. Update existing item (reduce quantity)
+        // 1. Reduce quantity of existing
         const updatedInventory = prev.map(item => {
           if (item.id === itemId) {
             return { ...item, quantity: item.quantity - numericAmount, lastUpdated: Date.now() };
@@ -570,9 +582,9 @@ function App() {
           return item;
         });
 
-        // 2. Add new item entry for the target location
+        // 2. Create new entry
         const newItemEntry = {
-          ...itemToTransfer,
+          ...currentItem,
           id: Date.now() + Math.random(),
           quantity: numericAmount,
           warehouse: targetWarehouse,
@@ -585,18 +597,17 @@ function App() {
     });
 
     if (transferSuccess) {
-      const item = inventory.find(it => it.id === itemId);
       const newTransaction = {
         id: Date.now(),
         itemId: itemId,
-        itemName: item?.name || 'Bilinmeyen Ürün',
+        itemName: itemToTransfer.name || 'Bilinmeyen Ürün',
         type: 'transfer',
         amount: numericAmount,
         date: new Date().toISOString(),
-        note: `${item?.warehouse || '-'} -> ${targetWarehouse} (${targetShelf})`
+        note: `${itemToTransfer.warehouse || '-'} -> ${targetWarehouse} (${targetShelf})`
       };
       setTransactions(txs => [newTransaction, ...txs]);
-      alert('Transfer işlemi başarıyla tamamlandı (Ürün bölündü/taşındı).');
+      alert('Transfer işlemi başarıyla tamamlandı.');
       setActiveTab('warehouses');
     }
   };

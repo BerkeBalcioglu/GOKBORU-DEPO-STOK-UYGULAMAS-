@@ -7,7 +7,7 @@ export default function Inventory({ inventory, emanetler = [] }) {
   const [sortField, setSortField] = useState('lastUpdated'); // 'lastUpdated' | 'code'
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' | 'desc'
 
-  const categories = ['Hepsi', 'Sarf', 'Sarf(Gıda)', 'Diğer'];
+  const categories = ['Hepsi', 'Sarf', 'Sarf(Gıda)', 'Demirbaş', 'Diğer'];
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -258,7 +258,19 @@ export default function Inventory({ inventory, emanetler = [] }) {
                       {item.code || `#${item.id}`}
                     </div>
                   </td>
-                  <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>{item.name}</td>
+                  <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>
+                    <div>{item.name}</div>
+                    {item.registrationNumber && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--status-green)', opacity: 0.9, marginTop: '2px' }}>
+                        🛡️ Barkod No: {item.registrationNumber}
+                      </div>
+                    )}
+                    {item.serialNumber && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', opacity: 0.8, marginTop: '2px' }}>
+                        🆔 Seri No: {item.serialNumber}
+                      </div>
+                    )}
+                  </td>
                   <td>{item.usage}</td>
                   <td style={{ color: 'var(--text-muted)' }}>{item.model || '-'}</td>
                   <td style={{ color: 'var(--accent-blue)', fontWeight: 500, minWidth: '200px' }}>
@@ -287,8 +299,8 @@ export default function Inventory({ inventory, emanetler = [] }) {
                       fontSize: '0.85rem', 
                       padding: '4px 8px', 
                       borderRadius: '6px',
-                      background: item.category === 'Sarf' ? 'rgba(59, 130, 246, 0.1)' : (item.category === 'Sarf(Gıda)' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)'),
-                      color: item.category === 'Sarf' ? 'var(--accent-blue)' : (item.category === 'Sarf(Gıda)' ? 'var(--status-green)' : 'var(--text-muted)'),
+                      background: item.category === 'Demirbaş' ? 'rgba(245, 158, 11, 0.15)' : (item.category === 'Sarf' ? 'rgba(59, 130, 246, 0.1)' : (item.category === 'Sarf(Gıda)' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)')),
+                      color: item.category === 'Demirbaş' ? '#f59e0b' : (item.category === 'Sarf' ? 'var(--accent-blue)' : (item.category === 'Sarf(Gıda)' ? 'var(--status-green)' : 'var(--text-muted)')),
                       border: '1px solid currentColor'
                     }}>
                       {item.category || 'Diğer'}

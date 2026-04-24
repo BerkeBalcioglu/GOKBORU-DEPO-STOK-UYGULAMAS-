@@ -6,7 +6,7 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  
+
   // New Item Fields
   const [newCode, setNewCode] = useState('');
   const [newUsage, setNewUsage] = useState('');
@@ -14,12 +14,14 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
   const [newUnit, setNewUnit] = useState('Adet');
   const [newWarehouse, setNewWarehouse] = useState('Ana Depo');
   const [newShelf, setNewShelf] = useState('');
-  const [newCategory, setNewCategory] = useState('Diğer'); // Sarf | Sarf (Gıda) | Diğer
+  const [newCategory, setNewCategory] = useState('Diğer'); // Sarf | Sarf (Gıda) | Demirbaş | Diğer
+  const [newRegistrationNumber, setNewRegistrationNumber] = useState('');
+  const [newSerialNumber, setNewSerialNumber] = useState('');
 
   const [type, setType] = useState('girdi');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
-  
+
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const wrapperRef = useRef(null);
@@ -43,21 +45,21 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
     setSearchTerm(value);
     setSelectedItem(null);
     setIsCreatingNew(false);
-    
+
     if (value.trim() === '') {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
 
-    const filtered = inventory.filter(item => 
-      item.name.toLowerCase().includes(value.toLowerCase()) || 
+    const filtered = inventory.filter(item =>
+      item.name.toLowerCase().includes(value.toLowerCase()) ||
       (item.code && item.code.toLowerCase().includes(value.toLowerCase()))
     );
 
     // Exact match check
     const exactMatch = inventory.find(item => item.name.toLowerCase().trim() === value.toLowerCase().trim());
-    
+
     if (exactMatch) {
       setSelectedItem(exactMatch);
       setType('girdi');
@@ -74,6 +76,8 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
     setShowSuggestions(false);
     setIsCreatingNew(false);
     setNewCategory(item.category || 'Diğer');
+    setNewRegistrationNumber(item.registrationNumber || '');
+    setNewSerialNumber(item.serialNumber || '');
   };
 
   const handleCreateNewClick = () => {
@@ -89,7 +93,7 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
       alert('Lütfen geçerli bir miktar girin.');
       return;
     }
-    
+
     if (!selectedItem && !isCreatingNew) {
       alert('Lütfen listeden bir malzeme seçin veya yeni olarak ekleyin.');
       return;
@@ -97,8 +101,8 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
 
     if (isCreatingNew) {
       if (!searchTerm.trim()) {
-         alert('Lütfen yeni malzeme adını girin.');
-         return;
+        alert('Lütfen yeni malzeme adını girin.');
+        return;
       }
       // Check again to prevent duplicate creation just in case
       const duplicate = inventory.find(item => item.name.toLowerCase() === searchTerm.toLowerCase());
@@ -109,6 +113,14 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
         return;
       }
 
+      if (newRegistrationNumber.trim()) {
+        const duplicateReg = inventory.find(item => item.registrationNumber === newRegistrationNumber.trim());
+        if (duplicateReg) {
+          alert('Bu Barkod Numarası zaten kullanımda. Lütfen benzersiz bir numara girin.');
+          return;
+        }
+      }
+
       const success = onTransaction(null, 'girdi', amount, note, {
         name: searchTerm,
         code: newCode,
@@ -117,7 +129,9 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
         unit: newUnit,
         warehouse: newWarehouse,
         shelf: newShelf,
-        category: newCategory
+        category: newCategory,
+        registrationNumber: newRegistrationNumber.trim(),
+        serialNumber: newSerialNumber.trim()
       });
 
       if (success) {
@@ -131,7 +145,8 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
       // Update existing item's category if it's being changed in the form
       const success = onTransaction(selectedItem.id, type, amount, note, {
         ...selectedItem,
-        category: newCategory
+        category: newCategory,
+        serialNumber: newSerialNumber !== '' ? newSerialNumber.trim() : (selectedItem.serialNumber || '')
       });
       if (success) {
         if (note.trim() && !savedNotes.includes(note.trim())) {
@@ -155,26 +170,28 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
     setNewWarehouse('Ana Depo');
     setNewShelf('');
     setNewCategory('Diğer');
+    setNewRegistrationNumber('');
+    setNewSerialNumber('');
   };
 
   const recentTransactions = (transactions || []).slice(0, 10);
 
   return (
     <div className="transaction-container" style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
-      
+
       {/* Left Column: Form */}
       <div style={{ flex: '1 1 450px', minWidth: '350px' }}>
         <h3 style={{ marginBottom: '24px' }}>Akıllı Girdi / Çıktı İşlemi</h3>
-        
+
         <form onSubmit={handleSubmit} style={{ background: 'var(--bg-card-solid)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-          
+
           {!isCreatingNew && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
               <button type="button" onClick={() => setType('girdi')} style={{ padding: '12px', borderRadius: '10px', border: type === 'girdi' ? '2px solid var(--status-green)' : '1px solid var(--border-color)', background: type === 'girdi' ? 'var(--status-green-bg)' : 'transparent', color: type === 'girdi' ? 'var(--status-green)' : 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                 <ArrowDownToLine size={20} />
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Girdi (+)</span>
               </button>
-              
+
               <button type="button" onClick={() => setType('cikti')} style={{ padding: '12px', borderRadius: '10px', border: type === 'cikti' ? '2px solid var(--status-red)' : '1px solid var(--border-color)', background: type === 'cikti' ? 'var(--status-red-bg)' : 'transparent', color: type === 'cikti' ? 'var(--status-red)' : 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                 <ArrowUpFromLine size={20} />
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Çıktı (-)</span>
@@ -211,9 +228,21 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
           </div>
 
           {selectedItem && !isCreatingNew && (
-            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', marginBottom: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Stok: <strong style={{ color: selectedItem.quantity < (selectedItem.minStock || 5) ? 'var(--status-red)' : 'var(--status-green)' }}>{selectedItem.quantity} {selectedItem.unit}</strong></span>
-              <span>📍 {selectedItem.warehouse} / {selectedItem.shelf}</span>
+            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', marginBottom: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Stok: <strong style={{ color: selectedItem.quantity < (selectedItem.minStock || 5) ? 'var(--status-red)' : 'var(--status-green)' }}>{selectedItem.quantity} {selectedItem.unit}</strong></span>
+                <span>📍 {selectedItem.warehouse} / {selectedItem.shelf}</span>
+              </div>
+              {selectedItem.serialNumber && <div>🆔 Seri No: <span style={{ color: 'var(--accent-blue)' }}>{selectedItem.serialNumber}</span></div>}
+              {selectedItem.registrationNumber && <div>🛡️ Barkod No: <span style={{ color: 'var(--status-green)' }}>{selectedItem.registrationNumber}</span></div>}
+              <input
+                type="text"
+                className="input-field"
+                value={newSerialNumber}
+                onChange={(e) => setNewSerialNumber(e.target.value)}
+                placeholder="Seri Numarası Güncelle (Opsiyonel)"
+                style={{ fontSize: '0.75rem', padding: '4px 8px', height: 'auto', marginTop: '4px' }}
+              />
             </div>
           )}
 
@@ -228,14 +257,18 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
                 <input type="text" className="input-field" value={newWarehouse} onChange={(e) => setNewWarehouse(e.target.value)} placeholder="Depo" />
                 <input type="text" className="input-field" value={newShelf} onChange={(e) => setNewShelf(e.target.value)} placeholder="Raf" />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
+                <input type="text" className="input-field" value={newSerialNumber} onChange={(e) => setNewSerialNumber(e.target.value)} placeholder="Seri No (Opsiyonel)" />
+                <input type="text" className="input-field" value={newRegistrationNumber} onChange={(e) => setNewRegistrationNumber(e.target.value)} placeholder="Barkod No (Opsiyonel)" />
+              </div>
             </div>
           )}
 
           {/* Product Category Selector */}
           <div className="input-group" style={{ marginBottom: '20px' }}>
-            <label>Sarf Türü (Sarf mı? Sarf(Gıda) mı?)</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              {['Sarf', 'Sarf(Gıda)', 'Diğer'].map(cat => (
+            <label>Kategori (Sarf, Demirbaş, Diğer)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
+              {['Sarf', 'Sarf(Gıda)', 'Demirbaş', 'Diğer'].map(cat => (
                 <button
                   key={cat}
                   type="button"
@@ -285,11 +318,11 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
               recentTransactions.map(tx => (
                 <div key={tx.id} style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ 
-                      width: '4px', 
-                      height: '32px', 
-                      borderRadius: '2px', 
-                      background: tx.type === 'girdi' ? 'var(--status-green)' : (tx.type === 'transfer' ? 'var(--accent-blue)' : 'var(--status-red)') 
+                    <div style={{
+                      width: '4px',
+                      height: '32px',
+                      borderRadius: '2px',
+                      background: tx.type === 'girdi' ? 'var(--status-green)' : (tx.type === 'transfer' ? 'var(--accent-blue)' : 'var(--status-red)')
                     }}></div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{tx.itemName}</div>
@@ -298,10 +331,10 @@ export default function TransactionForm({ inventory, onTransaction, savedNotes, 
                       </div>
                     </div>
                   </div>
-                  
+
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ 
-                      fontWeight: 700, 
+                    <div style={{
+                      fontWeight: 700,
                       fontSize: '1rem',
                       color: tx.type === 'girdi' ? 'var(--status-green)' : (tx.type === 'transfer' ? 'var(--accent-blue)' : 'var(--status-red)')
                     }}>

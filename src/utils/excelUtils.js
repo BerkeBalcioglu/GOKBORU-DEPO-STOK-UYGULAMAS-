@@ -15,10 +15,12 @@ export const exportToExcel = (inventory, transactions, maintenances = [], emanet
     'Stok Miktarı': item.quantity,
     'Birim': item.unit || 'Adet',
     'Min Stok': item.minStock || 5,
+    'Barkod No': item.registrationNumber || '-',
+    'Seri No': item.serialNumber || '-',
     'Son İşlem': item.lastUpdated ? new Date(item.lastUpdated).toLocaleString('tr-TR') : '-'
   }));
   const wsInventory = XLSX.utils.json_to_sheet(inventoryData);
-  wsInventory['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 20 }];
+  wsInventory['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
   XLSX.utils.book_append_sheet(wb, wsInventory, 'Stok Durumu');
 
   // 2. Emanetler Sheet (NEW)
@@ -49,16 +51,21 @@ export const exportToExcel = (inventory, transactions, maintenances = [], emanet
   XLSX.utils.book_append_sheet(wb, wsTransactions, 'İşlem Geçmişi');
 
   // 4. Maintenances Sheet (NEW)
-  const maintenanceData = maintenances.map(m => ({
-    'Tarih': new Date(m.date).toLocaleDateString('tr-TR'),
-    'Malzeme': m.itemName,
-    'Kod': m.itemCode || '-',
-    'İşlem Detayı': m.details,
-    'Yapan Kişi/Kurum': m.person,
-    'Sonraki Bakım': m.nextDate ? new Date(m.nextDate).toLocaleDateString('tr-TR') : '-'
-  }));
+  const maintenanceData = maintenances.map(m => {
+    const invItem = inventory.find(i => i.id === m.itemId) || {};
+    return {
+      'Tarih': new Date(m.date).toLocaleDateString('tr-TR'),
+      'Malzeme': m.itemName,
+      'Kod': m.itemCode || '-',
+      'Barkod No': invItem.registrationNumber || '-',
+      'Seri No': invItem.serialNumber || '-',
+      'İşlem Detayı': m.details,
+      'Yapan Kişi/Kurum': m.person,
+      'Sonraki Bakım': m.nextDate ? new Date(m.nextDate).toLocaleDateString('tr-TR') : '-'
+    };
+  });
   const wsMaintenances = XLSX.utils.json_to_sheet(maintenanceData);
-  wsMaintenances['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
+  wsMaintenances['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsMaintenances, 'Bakım Geçmişi');
 
   // 5. Warehouse Summary
@@ -112,6 +119,8 @@ export const importFromExcel = (file, currentInventory, callback) => {
           warehouse: row['Depo Yeri'] || row['Depo'] || 'Ana Depo',
           shelf: row['Raf'] || row['Kabin'] || '',
           minStock: parseInt(row['Min Stok']) || 5,
+          registrationNumber: row['Barkod No'] || row['registrationNumber'] || '',
+          serialNumber: row['Seri No'] || row['serialNumber'] || '',
           lastUpdated: Date.now()
         };
 
@@ -132,18 +141,23 @@ export const importFromExcel = (file, currentInventory, callback) => {
   reader.readAsArrayBuffer(file);
 };
 
-export const exportMaintenancesToExcel = (maintenances) => {
+export const exportMaintenancesToExcel = (maintenances, inventory = []) => {
   const wb = XLSX.utils.book_new();
-  const maintenanceData = maintenances.map(m => ({
-    'Tarih': new Date(m.date).toLocaleDateString('tr-TR'),
-    'Malzeme': m.itemName,
-    'Kod': m.itemCode || '-',
-    'İşlem Detayı': m.details,
-    'Yapan Kişi/Kurum': m.person,
-    'Sonraki Bakım': m.nextDate ? new Date(m.nextDate).toLocaleDateString('tr-TR') : '-'
-  }));
+  const maintenanceData = maintenances.map(m => {
+    const invItem = inventory.find(i => i.id === m.itemId) || {};
+    return {
+      'Tarih': new Date(m.date).toLocaleDateString('tr-TR'),
+      'Malzeme': m.itemName,
+      'Kod': m.itemCode || '-',
+      'Barkod No': invItem.registrationNumber || '-',
+      'Seri No': invItem.serialNumber || '-',
+      'İşlem Detayı': m.details,
+      'Yapan Kişi/Kurum': m.person,
+      'Sonraki Bakım': m.nextDate ? new Date(m.nextDate).toLocaleDateString('tr-TR') : '-'
+    };
+  });
   const wsMaintenances = XLSX.utils.json_to_sheet(maintenanceData);
-  wsMaintenances['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
+  wsMaintenances['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsMaintenances, 'Bakım Geçmişi');
   XLSX.writeFile(wb, `GOKBORU_Bakim_Listesi_${new Date().toISOString().slice(0,10)}.xlsx`);
 };

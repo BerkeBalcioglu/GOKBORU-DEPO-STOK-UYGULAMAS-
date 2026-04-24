@@ -11,6 +11,9 @@ export default function MaintenancePanel({ inventory, maintenances, onAdd, onDel
   const [person, setPerson] = useState('');
   const [nextDate, setNextDate] = useState('');
   const [showGantt, setShowGantt] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('Hepsi');
+
+  const categories = ['Hepsi', 'Sarf', 'Sarf(Gıda)', 'Demirbaş', 'Diğer'];
 
   const handleAddSubmit = (e) => {
     e.preventDefault();
@@ -30,9 +33,16 @@ export default function MaintenancePanel({ inventory, maintenances, onAdd, onDel
   const addTaskRow = () => setTasks([...tasks, '']);
   const removeTaskRow = (idx) => { const t = tasks.filter((_, i) => i !== idx); setTasks(t.length > 0 ? t : ['']); };
 
-  const filteredLogs = selectedItemId
-    ? maintenances.filter(m => m.itemId === parseInt(selectedItemId))
-    : maintenances;
+  const filteredLogs = maintenances.filter(m => {
+    if (selectedItemId && m.itemId !== parseInt(selectedItemId)) return false;
+    
+    const invItem = inventory.find(i => i.id === m.itemId);
+    const cat = invItem?.category || 'Diğer';
+    
+    if (categoryFilter !== 'Hepsi' && cat.toLowerCase() !== categoryFilter.toLowerCase()) return false;
+    
+    return true;
+  });
 
   return (
     <div>
@@ -131,9 +141,32 @@ export default function MaintenancePanel({ inventory, maintenances, onAdd, onDel
 
         {/* Sağ: Geçmiş */}
         <div style={{ background: 'var(--bg-card-solid)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h4 style={{ margin: 0 }}>{selectedItemId ? 'Seçili Ekipmanın Geçmişi' : 'Tüm Bakım Geçmişi'}</h4>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: '4px' }}>{filteredLogs.length} Kayıt</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {selectedItemId ? 'Seçili Ekipmanın Geçmişi' : 'Tüm Bakım Geçmişi'}
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: '4px', fontWeight: 'normal' }}>{filteredLogs.length} Kayıt</span>
+            </h4>
+            
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    border: '1px solid var(--border-color)',
+                    background: categoryFilter === cat ? 'var(--accent-blue)' : 'var(--bg-card)',
+                    color: categoryFilter === cat ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
@@ -158,34 +191,53 @@ export default function MaintenancePanel({ inventory, maintenances, onAdd, onDel
                 </div>
 
                 {/* Rows */}
-                {filteredLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(log => (
-                  <div key={log.id} style={{
-                    display: 'grid',
-                    gridTemplateColumns: selectedItemId ? '130px 1fr 180px' : '130px 160px 1fr 180px',
-                    padding: '14px 16px',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    alignItems: 'start'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <div style={{ fontSize: '0.88rem', fontWeight: 500, paddingTop: '2px' }}>
-                      {new Date(log.date).toLocaleDateString('tr-TR')}
-                    </div>
-                    {!selectedItemId && (
-                      <div>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', display: 'block', fontWeight: 700 }}>{log.itemCode}</span>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{log.itemName}</span>
+                {filteredLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(m => {
+                  const invItem = inventory.find(i => i.id === m.itemId);
+                  const category = invItem?.category || 'Diğer';
+                  const isOverdue = m.nextDate && new Date(m.nextDate) < new Date();
+                  return (
+                      <div key={m.id} style={{
+                        display: 'grid',
+                        gridTemplateColumns: selectedItemId ? '130px 1fr 180px' : '130px 160px 1fr 180px',
+                        padding: '16px',
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        alignItems: 'start',
+                        background: isOverdue ? 'rgba(239,68,68,0.05)' : 'transparent',
+                      }}>
+                        {/* Tarih Kısımı */}
+                        <div>
+                          <div style={{ fontWeight: 600, color: isOverdue ? '#ef4444' : 'var(--text-main)' }}>{new Date(m.date).toLocaleDateString('tr-TR')}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            <User size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                            {m.person || 'Belirtilmedi'}
+                          </div>
+                        </div>
+
+                        {/* Ekipman Kısımı */}
+                        {!selectedItemId && (
+                          <div>
+                            <div style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>{m.itemName}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>{m.itemCode}</div>
+                            {invItem?.registrationNumber && <div style={{ fontSize: '0.75rem', color: 'var(--status-green)', marginTop: '4px' }}>🛡️ Barkod No: {invItem.registrationNumber}</div>}
+                            <span style={{ 
+                              display: 'inline-block', marginTop: '6px', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px',
+                              background: category === 'Demirbaş' ? 'rgba(245, 158, 11, 0.15)' : (category === 'Sarf' ? 'rgba(59, 130, 246, 0.1)' : (category === 'Sarf(Gıda)' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)')),
+                              color: category === 'Demirbaş' ? '#f59e0b' : (category === 'Sarf' ? 'var(--accent-blue)' : (category === 'Sarf(Gıda)' ? 'var(--status-green)' : 'var(--text-muted)')),
+                              border: '1px solid currentColor'
+                            }}>
+                              {category}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.84rem', lineHeight: '1.5', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                          {m.details}
+                        </div>
+                        <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', paddingTop: '2px' }}>
+                          {m.person || '-'}
+                        </div>
                       </div>
-                    )}
-                    <div style={{ fontSize: '0.84rem', lineHeight: '1.5', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
-                      {log.details}
-                    </div>
-                    <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', paddingTop: '2px' }}>
-                      {log.person || '-'}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

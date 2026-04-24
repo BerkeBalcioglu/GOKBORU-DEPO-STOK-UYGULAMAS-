@@ -101,9 +101,16 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
   const dusuldu = emanetler.filter(e => e.status === 'dusuldu');
 
   const [listSearch, setListSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('Hepsi');
+  const categories = ['Hepsi', 'Sarf', 'Sarf(Gıda)', 'Demirbaş', 'Diğer'];
 
-  // Group by personName
+  // Group by personName with category filtering
   const groupedEmanetler = emanetler.reduce((acc, em) => {
+    const invItem = inventory.find(i => i.id === em.itemId);
+    const cat = invItem?.category || 'Diğer';
+    
+    if (categoryFilter !== 'Hepsi' && cat.toLowerCase() !== categoryFilter.toLowerCase()) return acc;
+
     if (!acc[em.personName]) acc[em.personName] = [];
     acc[em.personName].push(em);
     return acc;
@@ -281,10 +288,33 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
             ))}
           </div>
 
-          {/* Search */}
-          <div className="no-print" style={{ position: 'relative', marginBottom: '20px', maxWidth: '380px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-muted)' }} />
-            <input type="text" className="input-field" value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Kişi veya malzeme ile ara..." style={{ paddingLeft: '38px', borderRadius: '20px' }} />
+          {/* Search & Category */}
+          <div className="no-print" style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', width: '300px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-muted)' }} />
+              <input type="text" className="input-field" value={listSearch} onChange={e => setListSearch(e.target.value)} placeholder="Kişi veya malzeme ile ara..." style={{ paddingLeft: '38px', borderRadius: '20px', width: '100%' }} />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '12px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    border: '1px solid var(--border-color)',
+                    background: categoryFilter === cat ? 'var(--accent-blue)' : 'var(--bg-card)',
+                    color: categoryFilter === cat ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Grouped Table */}
@@ -310,8 +340,9 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
 
                   {/* Person Items List */}
                   <div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 80px 100px 100px 1fr 140px', padding: '10px 20px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 100px 80px 100px 100px 1fr 140px', padding: '10px 20px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       <div>Malzeme</div>
+                      <div>Kategori</div>
                       <div>Adet</div>
                       <div>Tarih</div>
                       <div>Saat</div>
@@ -319,14 +350,30 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
                       <div className="no-print" style={{ textAlign: 'right' }}>İşlemler</div>
                     </div>
                     
-                    {groupedEmanetler[person].sort((a,b) => new Date(b.date) - new Date(a.date)).map(em => (
-                      <div key={em.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 80px 100px 100px 1fr 140px', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center', opacity: em.status === 'aktif' ? 1 : 0.6 }}
+                    {groupedEmanetler[person].sort((a,b) => new Date(b.date) - new Date(a.date)).map(em => {
+                      const invItem = inventory.find(i => i.id === em.itemId) || {};
+                      const category = invItem.category || 'Diğer';
+                      const sicilNo = invItem.registrationNumber || '';
+                      
+                      return (
+                      <div key={em.id} style={{ display: 'grid', gridTemplateColumns: '1.2fr 100px 80px 100px 100px 1fr 140px', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center', opacity: em.status === 'aktif' ? 1 : 0.6 }}
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <div>
                           <span style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', display: 'block', fontWeight: 700 }}>{em.itemCode}</span>
                           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{em.itemName}</span>
+                          {sicilNo && <div style={{ fontSize: '0.7rem', color: 'var(--status-green)', marginTop: '2px' }}>🛡️ Barkod No: {sicilNo}</div>}
+                        </div>
+                        <div>
+                          <span style={{ 
+                            fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px',
+                            background: category === 'Demirbaş' ? 'rgba(245, 158, 11, 0.15)' : (category === 'Sarf' ? 'rgba(59, 130, 246, 0.1)' : (category === 'Sarf(Gıda)' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)')),
+                            color: category === 'Demirbaş' ? '#f59e0b' : (category === 'Sarf' ? 'var(--accent-blue)' : (category === 'Sarf(Gıda)' ? 'var(--status-green)' : 'var(--text-muted)')),
+                            border: '1px solid currentColor'
+                          }}>
+                            {category}
+                          </span>
                         </div>
                         <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>{em.amount}</div>
                         <div style={{ fontSize: '0.83rem', color: 'var(--text-muted)' }}>{em.dateStr}</div>
@@ -362,7 +409,8 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
                           </button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))

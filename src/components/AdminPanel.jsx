@@ -251,28 +251,32 @@ export default function AdminPanel({
                   <td>
                     {editingId === item.id ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <input 
-                          value={editFormData.category || ''} 
-                          onChange={e => handleChange(e, 'category')} 
-                          placeholder="Sarf mı? Sarf(Gıda) mı?"
-                          style={{ 
-                            width: '100px', 
-                            padding: '4px 8px', 
-                            borderRadius: '6px', 
-                            background: 'rgba(0,0,0,0.2)', 
+                        <select
+                          value={editFormData.category || 'Diğer'}
+                          onChange={e => handleChange(e, 'category')}
+                          style={{
+                            width: '120px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            background: 'rgba(0,0,0,0.2)',
                             border: '1px solid var(--accent-blue)',
                             color: '#fff',
                             fontSize: '0.8rem'
-                          }} 
-                        />
+                          }}
+                        >
+                          <option value="Sarf">Sarf</option>
+                          <option value="Sarf(Gıda)">Sarf(Gıda)</option>
+                          <option value="Demirbaş">Demirbaş</option>
+                          <option value="Diğer">Diğer</option>
+                        </select>
                       </div>
                     ) : (
                       <span style={{ 
                         fontSize: '0.75rem', 
                         padding: '4px 8px', 
                         borderRadius: '6px',
-                        background: item.category?.toLowerCase().includes('sarf') ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.05)',
-                        color: item.category?.toLowerCase().includes('sarf') ? 'var(--accent-blue)' : 'var(--text-muted)',
+                        background: item.category === 'Demirbaş' ? 'rgba(245, 158, 11, 0.15)' : (item.category?.toLowerCase().includes('sarf') ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.05)'),
+                        color: item.category === 'Demirbaş' ? '#f59e0b' : (item.category?.toLowerCase().includes('sarf') ? 'var(--accent-blue)' : 'var(--text-muted)'),
                         border: '1px solid currentColor',
                         display: 'inline-block',
                         minWidth: '60px',

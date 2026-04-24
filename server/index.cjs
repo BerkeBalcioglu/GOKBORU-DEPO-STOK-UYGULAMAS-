@@ -35,6 +35,7 @@ app.post('/save-local-db', (req, res) => {
     const invData = (payload.inventory || []).map(item => ({
       'Kod': item.code || '-',
       'Adı': item.name,
+      'Sicil No': item.registrationNumber || '-',
       'Kategori': item.category || 'Diğer',
       'Miktar': item.quantity,
       'Birim': item.unit || 'Adet',
@@ -58,10 +59,23 @@ app.post('/save-local-db', (req, res) => {
     const mxData = (payload.maintenances || []).map(m => ({
       'Tarih': m.date,
       'Ürün': m.itemName,
+      'Sicil No': m.registrationNumber || '-',
       'Detay': m.details,
       'Yapan': m.person
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mxData), 'Bakimlar');
+    
+    // Emanetler
+    const emData = (payload.emanetler || []).map(em => ({
+      'Kişi': em.personName,
+      'Bölge': em.region || '-',
+      'Ürün': em.itemName,
+      'Sicil No': em.registrationNumber || '-',
+      'Miktar': em.amount,
+      'Tarih': em.dateStr + ' ' + em.timeStr,
+      'Durum': em.status
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(emData), 'Emanetler');
 
     XLSX.writeFile(wb, DB_EXCEL_PATH);
 

@@ -3,10 +3,21 @@ import { Package, MapPin, ChevronRight, ChevronDown, Boxes, Search } from 'lucid
 
 export default function WarehousePanel({ inventory }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('Hepsi');
   const [expandedWarehouse, setExpandedWarehouse] = useState(null);
 
+  const categories = ['Hepsi', 'Sarf', 'Sarf(Gıda)', 'Demirbaş', 'Diğer'];
+
+  // Filter inventory first
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = categoryFilter === 'Hepsi' || (item.category || 'Diğer').toLowerCase() === categoryFilter.toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
+
   // Group inventory by warehouse
-  const warehouseGroups = inventory.reduce((acc, item) => {
+  const warehouseGroups = filteredInventory.reduce((acc, item) => {
     const wh = item.warehouse || 'Genel / Belirtilmemiş';
     if (!acc[wh]) acc[wh] = [];
     acc[wh].push(item);
@@ -21,10 +32,7 @@ export default function WarehousePanel({ inventory }) {
 
   const filteredWarehouses = warehouses.filter(wh => 
     wh.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    warehouseGroups[wh].some(item => 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
+    warehouseGroups[wh].length > 0
   );
 
   return (
@@ -46,6 +54,27 @@ export default function WarehousePanel({ inventory }) {
             style={{ paddingLeft: '40px', width: '100%', borderRadius: '20px' }}
           />
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setCategoryFilter(cat)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '12px',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              border: '1px solid var(--border-color)',
+              background: categoryFilter === cat ? 'var(--accent-blue)' : 'var(--bg-card)',
+              color: categoryFilter === cat ? '#fff' : 'var(--text-muted)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '32px' }}>
@@ -90,6 +119,7 @@ export default function WarehousePanel({ inventory }) {
                       <tr>
                         <th>Kod</th>
                         <th>Malzeme Adı</th>
+                        <th>Kategori</th>
                         <th>Raf / Konum</th>
                         <th style={{ textAlign: 'right' }}>Miktar</th>
                       </tr>
@@ -98,7 +128,20 @@ export default function WarehousePanel({ inventory }) {
                       {items.map(item => (
                         <tr key={item.id}>
                           <td style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', width: '100px' }}>{item.code}</td>
-                          <td style={{ fontWeight: 500 }}>{item.name}</td>
+                          <td style={{ fontWeight: 500 }}>
+                            <div>{item.name}</div>
+                            {item.registrationNumber && <div style={{ fontSize: '0.75rem', color: 'var(--status-green)', marginTop: '2px' }}>🛡️ Barkod No: {item.registrationNumber}</div>}
+                          </td>
+                          <td>
+                            <span style={{ 
+                              fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px',
+                              background: item.category === 'Demirbaş' ? 'rgba(245, 158, 11, 0.15)' : (item.category === 'Sarf' ? 'rgba(59, 130, 246, 0.1)' : (item.category === 'Sarf(Gıda)' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)')),
+                              color: item.category === 'Demirbaş' ? '#f59e0b' : (item.category === 'Sarf' ? 'var(--accent-blue)' : (item.category === 'Sarf(Gıda)' ? 'var(--status-green)' : 'var(--text-muted)')),
+                              border: '1px solid currentColor'
+                            }}>
+                              {item.category || 'Diğer'}
+                            </span>
+                          </td>
                           <td>
                             <span style={{ background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-blue)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
                               {item.shelf || '-'}
