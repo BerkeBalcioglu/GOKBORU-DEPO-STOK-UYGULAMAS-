@@ -260,38 +260,60 @@ export default function Inventory({ inventory, emanetler = [] }) {
                   </td>
                   <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>
                     <div>{item.name}</div>
-                    {item.registrationNumber && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--status-green)', opacity: 0.9, marginTop: '2px' }}>
-                        🛡️ Barkod No: {item.registrationNumber}
-                      </div>
-                    )}
-                    {item.serialNumber && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', opacity: 0.8, marginTop: '2px' }}>
-                        🆔 Seri No: {item.serialNumber}
-                      </div>
-                    )}
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.2' }}>
+                      {item.code && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          📦 Stok No: {item.code}
+                        </div>
+                      )}
+                      {item.registrationNumber && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          🛡️ Barkod No: {item.registrationNumber}
+                        </div>
+                      )}
+                      {item.serialNumber && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          🆔 Seri No: {item.serialNumber}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td>{item.usage}</td>
                   <td style={{ color: 'var(--text-muted)' }}>{item.model || '-'}</td>
-                  <td style={{ color: 'var(--accent-blue)', fontWeight: 500, minWidth: '200px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <td style={{ color: 'var(--accent-blue)', fontWeight: 500, minWidth: '220px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {item.locations.map((loc, idx) => (
                         <div key={idx} style={{ 
-                          padding: '4px 8px', 
-                          background: 'rgba(59, 130, 246, 0.05)', 
-                          borderRadius: '6px', 
-                          border: '1px solid rgba(59, 130, 246, 0.1)',
+                          padding: '6px 10px', 
+                          background: 'rgba(59, 130, 246, 0.08)', 
+                          borderRadius: '8px', 
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                         }}>
-                          <div>
-                            <span style={{ fontSize: '0.85rem' }}>📍 {loc.warehouse}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{loc.shelf}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#fff' }}>📍 {loc.warehouse}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{loc.shelf}</span>
                           </div>
-                          <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{loc.quantity}</span>
+                          <div style={{ 
+                            background: 'var(--accent-blue)', 
+                            color: '#fff', 
+                            padding: '2px 8px', 
+                            borderRadius: '6px', 
+                            fontSize: '0.8rem',
+                            fontWeight: 700 
+                          }}>
+                            {loc.quantity}
+                          </div>
                         </div>
                       ))}
+                      {item.locations.length > 1 && (
+                        <div style={{ fontSize: '0.65rem', textAlign: 'right', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          * {item.locations.length} farklı konumda bulunuyor
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td>
@@ -307,22 +329,15 @@ export default function Inventory({ inventory, emanetler = [] }) {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       <span style={{ 
                         fontSize: '1.1rem', 
-                        fontWeight: 600,
-                        color: isCritical ? 'var(--status-red)' : 'var(--status-green)'
+                        fontWeight: 800, 
+                        color: isCritical ? 'var(--status-red)' : 'var(--status-green)' 
                       }}>
                         {item.totalQuantity}
                       </span>
-                      {loanedQty > 0 && (
-                        <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: '0.9rem' }}>
-                          (-{loanedQty})
-                        </span>
-                      )}
-                      <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>
-                        {item.unit || 'Adet'}
-                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.unit || 'Adet'} (Toplam)</span>
                     </div>
                   </td>
                   <td>

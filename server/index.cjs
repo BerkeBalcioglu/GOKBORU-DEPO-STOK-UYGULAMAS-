@@ -33,23 +33,27 @@ app.post('/save-local-db', (req, res) => {
 
     // Inventory
     const invData = (payload.inventory || []).map(item => ({
-      'Kod': item.code || '-',
-      'Adı': item.name,
-      'Sicil No': item.registrationNumber || '-',
+      'Stok No': item.code || '-',
+      'Malzeme Adı': item.name,
+      'Barkod No': item.registrationNumber || '-',
+      'Seri No': item.serialNumber || '-',
       'Kategori': item.category || 'Diğer',
       'Miktar': item.quantity,
       'Birim': item.unit || 'Adet',
       'Depo': item.warehouse || '-',
       'Raf': item.shelf || '-',
-      'Min Stok': item.minStock || 5
+      'Min Stok': item.minStock || 5,
+      'Kullanım': item.usage || '-',
+      'Model': item.model || '-',
+      'Son Güncelleme': item.lastUpdated ? new Date(item.lastUpdated).toLocaleString('tr-TR') : '-'
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invData), 'Stok');
 
     // Transactions
     const txData = (payload.transactions || []).map(tx => ({
       'Tarih': tx.date,
-      'Tip': tx.type,
-      'Ürün': tx.itemName,
+      'İşlem Tipi': tx.type,
+      'Malzeme Adı': tx.itemName,
       'Miktar': tx.amount,
       'Not': tx.note || ''
     }));
@@ -58,10 +62,12 @@ app.post('/save-local-db', (req, res) => {
     // Maintenances
     const mxData = (payload.maintenances || []).map(m => ({
       'Tarih': m.date,
-      'Ürün': m.itemName,
-      'Sicil No': m.registrationNumber || '-',
+      'Malzeme': m.itemName,
+      'Stok No': m.itemCode || '-',
+      'Barkod No': m.registrationNumber || '-',
       'Detay': m.details,
-      'Yapan': m.person
+      'Yapan': m.person,
+      'Sonraki Bakım': m.nextDate || '-'
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mxData), 'Bakimlar');
     
@@ -69,11 +75,13 @@ app.post('/save-local-db', (req, res) => {
     const emData = (payload.emanetler || []).map(em => ({
       'Kişi': em.personName,
       'Bölge': em.region || '-',
-      'Ürün': em.itemName,
-      'Sicil No': em.registrationNumber || '-',
+      'Malzeme': em.itemName,
+      'Stok No': em.itemCode || '-',
+      'Barkod No': em.registrationNumber || '-',
       'Miktar': em.amount,
       'Tarih': em.dateStr + ' ' + em.timeStr,
-      'Durum': em.status
+      'Durum': em.status,
+      'Not': em.note || ''
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(emData), 'Emanetler');
 

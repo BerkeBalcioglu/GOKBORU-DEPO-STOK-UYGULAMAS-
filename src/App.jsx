@@ -251,6 +251,8 @@ function App() {
         warehouse: newItemDetails.warehouse || '-',
         shelf: newItemDetails.shelf || '-',
         category: newItemDetails.category || 'Diğer',
+        registrationNumber: newItemDetails.registrationNumber || '',
+        serialNumber: newItemDetails.serialNumber || '',
         lastUpdated: Date.now()
       };
       
@@ -264,10 +266,12 @@ function App() {
       if (itemIdx === -1) return false;
 
       const item = nextInventory[itemIdx];
-      const updatedCategory = newItemDetails?.category || item.category || 'Diğer';
+      
+      // Update item with new details if provided (like category, serialNumber etc.)
+      const baseUpdate = newItemDetails ? { ...item, ...newItemDetails } : item;
       
       if (type === 'girdi') {
-        nextInventory[itemIdx] = { ...item, quantity: item.quantity + numericAmount, category: updatedCategory, lastUpdated: Date.now() };
+        nextInventory[itemIdx] = { ...baseUpdate, quantity: item.quantity + numericAmount, lastUpdated: Date.now() };
         finalItemDetails = nextInventory[itemIdx];
         success = true;
       } else if (type === 'cikti') {
@@ -275,7 +279,7 @@ function App() {
           numericAmount = item.quantity;
         }
         if (numericAmount > 0) {
-          nextInventory[itemIdx] = { ...item, quantity: item.quantity - numericAmount, category: updatedCategory, lastUpdated: Date.now() };
+          nextInventory[itemIdx] = { ...baseUpdate, quantity: item.quantity - numericAmount, lastUpdated: Date.now() };
           finalItemDetails = nextInventory[itemIdx];
           success = true;
         }
@@ -463,9 +467,23 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
 
-    importFromExcel(file, inventory, (newInventory, stats) => {
-      setInventory(newInventory);
-      alert(`Excel başarıyla yüklendi!\n${stats.new} yeni ürün eklendi, ${stats.updated} ürün güncellendi.`);
+    if (!window.confirm("Seçilen Excel dosyasındaki veriler tüm sistem verilerinin (stok, işlemler, bakımlar, emanetler) üzerine yazılacaktır. Devam etmek istiyor musunuz?")) {
+      if(fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    importFromExcel(file, (fullData) => {
+      if (fullData.inventory) setInventory(fullData.inventory);
+      if (fullData.transactions) setTransactions(fullData.transactions);
+      if (fullData.maintenances) setMaintenances(fullData.maintenances);
+      if (fullData.emanetler) setEmanetler(fullData.emanetler);
+      
+      alert(`Excel başarıyla yüklendi! Tüm sistem verileri güncellendi.\n\n` +
+            `- ${fullData.inventory.length} Ürün\n` +
+            `- ${fullData.transactions.length} İşlem\n` +
+            `- ${fullData.maintenances.length} Bakım\n` +
+            `- ${fullData.emanetler.length} Emanet`);
+            
       if(fileInputRef.current) fileInputRef.current.value = '';
     });
   };
@@ -547,69 +565,74 @@ function App() {
     const numericAmount = parseInt(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) return;
 
-    const itemToTransfer = inventory.find(it => it.id === itemId);
-    if (!itemToTransfer) return;
+    const sourceItem = inventory.find(it => it.id === itemId);
+    if (!sourceItem) return;
 
-    if (numericAmount > itemToTransfer.quantity) {
+    if (numericAmount > sourceItem.quantity) {
       alert("Yetersiz miktar!");
       return;
     }
 
-    let transferSuccess = false;
+    // Hedefte aynı ürün (İsim + Kod + Depo + Raf) var mı bak
+    // Not: ID farklı olsa da aynı ürün olabilir
+    const targetItem = inventory.find(it => 
+      it.name === sourceItem.name && 
+      (it.code === sourceItem.code) && 
+      it.warehouse === targetWarehouse && 
+      it.shelf === targetShelf &&
+      it.id !== sourceItem.id
+    );
 
-    setInventory(prev => {
-      // Re-find the item in the current state to be safe
-      const currentItem = prev.find(it => it.id === itemId);
-      if (!currentItem) return prev;
+    let nextInventory = [...inventory];
 
-      if (numericAmount === currentItem.quantity) {
-        // Full transfer
-        transferSuccess = true;
-        return prev.map(item => {
-          if (item.id === itemId) {
-            return { ...item, warehouse: targetWarehouse, shelf: targetShelf, lastUpdated: Date.now() };
-          }
-          return item;
-        });
+    if (targetItem) {
+      // MERGE LOGIC
+      if (numericAmount === sourceItem.quantity) {
+        // Full transfer: Source'u sil, target'a ekle
+        nextInventory = nextInventory.filter(it => it.id !== sourceItem.id);
+        nextInventory = nextInventory.map(it => it.id === targetItem.id ? { ...it, quantity: it.quantity + numericAmount, lastUpdated: Date.now() } : it);
       } else {
-        // Partial transfer: Split the item
-        transferSuccess = true;
-        // 1. Reduce quantity of existing
-        const updatedInventory = prev.map(item => {
-          if (item.id === itemId) {
-            return { ...item, quantity: item.quantity - numericAmount, lastUpdated: Date.now() };
-          }
-          return item;
+        // Partial transfer: Source'tan düş, target'a ekle
+        nextInventory = nextInventory.map(it => {
+          if (it.id === sourceItem.id) return { ...it, quantity: it.quantity - numericAmount, lastUpdated: Date.now() };
+          if (it.id === targetItem.id) return { ...it, quantity: it.quantity + numericAmount, lastUpdated: Date.now() };
+          return it;
         });
-
-        // 2. Create new entry
+      }
+    } else {
+      // NO MERGE (New location or location change)
+      if (numericAmount === sourceItem.quantity) {
+        // Full transfer: Just update location
+        nextInventory = nextInventory.map(it => it.id === itemId ? { ...it, warehouse: targetWarehouse, shelf: targetShelf, lastUpdated: Date.now() } : it);
+      } else {
+        // Partial transfer: Split item
+        nextInventory = nextInventory.map(it => it.id === itemId ? { ...it, quantity: it.quantity - numericAmount, lastUpdated: Date.now() } : it);
         const newItemEntry = {
-          ...currentItem,
+          ...sourceItem,
           id: Date.now() + Math.random(),
           quantity: numericAmount,
           warehouse: targetWarehouse,
           shelf: targetShelf,
           lastUpdated: Date.now()
         };
-
-        return [...updatedInventory, newItemEntry];
+        nextInventory.push(newItemEntry);
       }
-    });
-
-    if (transferSuccess) {
-      const newTransaction = {
-        id: Date.now(),
-        itemId: itemId,
-        itemName: itemToTransfer.name || 'Bilinmeyen Ürün',
-        type: 'transfer',
-        amount: numericAmount,
-        date: new Date().toISOString(),
-        note: `${itemToTransfer.warehouse || '-'} -> ${targetWarehouse} (${targetShelf})`
-      };
-      setTransactions(txs => [newTransaction, ...txs]);
-      alert('Transfer işlemi başarıyla tamamlandı.');
-      setActiveTab('warehouses');
     }
+
+    setInventory(nextInventory);
+
+    const newTransaction = {
+      id: Date.now(),
+      itemId: itemId,
+      itemName: sourceItem.name || 'Bilinmeyen Ürün',
+      type: 'transfer',
+      amount: numericAmount,
+      date: new Date().toISOString(),
+      note: `${sourceItem.warehouse || '-'} (${sourceItem.shelf || '-'}) -> ${targetWarehouse} (${targetShelf})`
+    };
+    setTransactions(txs => [newTransaction, ...txs]);
+    alert('Transfer işlemi başarıyla tamamlandı.');
+    setActiveTab('warehouses');
   };
 
   const handleDeductEmanet = (em, deductAmount) => {
