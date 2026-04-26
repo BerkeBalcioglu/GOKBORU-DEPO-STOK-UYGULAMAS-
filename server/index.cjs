@@ -31,7 +31,7 @@ app.post('/save-local-db', (req, res) => {
     // Save as Excel (User Accessible Database)
     const wb = XLSX.utils.book_new();
 
-    // Inventory
+    // 1. Inventory Sheet
     const invData = (payload.inventory || []).map(item => ({
       'Stok No': item.code || '-',
       'Malzeme Adı': item.name,
@@ -40,50 +40,98 @@ app.post('/save-local-db', (req, res) => {
       'Kategori': item.category || 'Diğer',
       'Miktar': item.quantity,
       'Birim': item.unit || 'Adet',
-      'Depo': item.warehouse || '-',
-      'Raf': item.shelf || '-',
-      'Min Stok': item.minStock || 5,
-      'Kullanım': item.usage || '-',
+      'Depo Yeri': item.warehouse || 'Ana Depo',
+      'Raf/Kabin': item.shelf || '-',
+      'Kullanım Yeri': item.usage || '-',
       'Model': item.model || '-',
+      'Min Stok': item.minStock || 5,
       'Son Güncelleme': item.lastUpdated ? new Date(item.lastUpdated).toLocaleString('tr-TR') : '-'
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invData), 'Stok');
+    const wsInventory = XLSX.utils.json_to_sheet(invData);
+    wsInventory['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, wsInventory, 'Stok_Durumu');
 
-    // Transactions
-    const txData = (payload.transactions || []).map(tx => ({
-      'Tarih': tx.date,
-      'İşlem Tipi': tx.type,
+    // 2. Emanetler Sheet
+    const emData = (payload.emanetler || []).map(em => ({
+      'Kişi Ad Soyad': em.personName,
+      'Bölge/Birim': em.region || '-',
+      'Malzeme Adı': em.itemName,
+      'Stok No': em.itemCode || '-',
+      'Barkod No': em.registrationNumber || '-',
+      'Adet': em.amount,
+      'Tarih': em.dateStr + ' ' + em.timeStr,
+      'Durum': em.status === 'aktif' ? 'Emanette' : (em.status === 'iade' ? 'İade Edildi' : 'Stoktan Düşüldü'),
+      'Not': em.note || ''
+    }));
+    const wsEmanet = XLSX.utils.json_to_sheet(emData);
+    wsEmanet['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, wsEmanet, 'Emanet_Listesi');
+
+    // 3. Depo Listesi (Yeni)
+    const warehouseMap = {};
+    (payload.inventory || []).forEach(item => {
+      const w = item.warehouse || 'Ana Depo';
+      if (!warehouseMap[w]) warehouseMap[w] = { name: w, itemsCount: 0, totalStock: 0 };
+      warehouseMap[w].itemsCount += 1;
+      warehouseMap[w].totalStock += item.quantity;
+    });
+    const warehouseData = Object.values(warehouseMap).map(w => ({
+      'Depo Adı': w.name,
+      'Farklı Kalem Ürün Sayısı': w.itemsCount,
+      'Toplam Stok Adedi': w.totalStock
+    }));
+    const wsWarehouses = XLSX.utils.json_to_sheet(warehouseData);
+    wsWarehouses['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, wsWarehouses, 'Depo_Listesi');
+
+    // 4. Girdi/Cikti Gecmisi (Yeni ayrım)
+    const ioTransactions = (payload.transactions || []).filter(tx => tx.type !== 'transfer');
+    const ioData = ioTransactions.map(tx => ({
+      'Tarih': new Date(tx.date).toLocaleString('tr-TR'),
+      'İşlem Tipi': tx.type === 'girdi' ? 'Girdi (+)' : 'Çıktı (-)',
       'Malzeme Adı': tx.itemName,
       'Miktar': tx.amount,
-      'Not': tx.note || ''
+      'Not/Açıklama': tx.note || ''
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txData), 'Islemler');
+    const wsIO = XLSX.utils.json_to_sheet(ioData);
+    wsIO['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(wb, wsIO, 'Girdi_Cikti_Gecmisi');
 
-    // Maintenances
+    // 5. Transfer Gecmisi (Yeni ayrım)
+    const transferTransactions = (payload.transactions || []).filter(tx => tx.type === 'transfer');
+    const transferData = transferTransactions.map(tx => ({
+      'Tarih': new Date(tx.date).toLocaleString('tr-TR'),
+      'Malzeme Adı': tx.itemName,
+      'Miktar': tx.amount,
+      'Transfer Detayı (Nereden -> Nereye)': tx.note || ''
+    }));
+    const wsTransfer = XLSX.utils.json_to_sheet(transferData);
+    wsTransfer['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 10 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, wsTransfer, 'Transfer_Gecmisi');
+
+    // 6. Maintenances Sheet
     const mxData = (payload.maintenances || []).map(m => ({
-      'Tarih': m.date,
+      'Tarih': new Date(m.date).toLocaleDateString('tr-TR'),
       'Malzeme': m.itemName,
       'Stok No': m.itemCode || '-',
       'Barkod No': m.registrationNumber || '-',
-      'Detay': m.details,
-      'Yapan': m.person,
-      'Sonraki Bakım': m.nextDate || '-'
+      'İşlem Detayı': m.details,
+      'Yapan Kişi/Kurum': m.person,
+      'Sonraki Bakım': m.nextDate ? new Date(m.nextDate).toLocaleDateString('tr-TR') : '-'
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mxData), 'Bakimlar');
+    const wsMaintenances = XLSX.utils.json_to_sheet(mxData);
+    wsMaintenances['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 50 }, { wch: 20 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, wsMaintenances, 'Bakim_Gecmisi');
+
+    // 7. Sistem Notları
+    const notesData = [];
+    (payload.savedTransactionNotes || []).forEach(n => notesData.push({ 'Kategori': 'İşlem Notu', 'Not': n }));
+    (payload.savedMaintenanceNotes || []).forEach(n => notesData.push({ 'Kategori': 'Bakım Notu', 'Not': n }));
+    if (notesData.length === 0) notesData.push({ 'Kategori': '-', 'Not': 'Kayıtlı not bulunamadı.' });
     
-    // Emanetler
-    const emData = (payload.emanetler || []).map(em => ({
-      'Kişi': em.personName,
-      'Bölge': em.region || '-',
-      'Malzeme': em.itemName,
-      'Stok No': em.itemCode || '-',
-      'Barkod No': em.registrationNumber || '-',
-      'Miktar': em.amount,
-      'Tarih': em.dateStr + ' ' + em.timeStr,
-      'Durum': em.status,
-      'Not': em.note || ''
-    }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(emData), 'Emanetler');
+    const wsNotes = XLSX.utils.json_to_sheet(notesData);
+    wsNotes['!cols'] = [{ wch: 20 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, wsNotes, 'Sistem_Notlari');
 
     XLSX.writeFile(wb, DB_EXCEL_PATH);
 
