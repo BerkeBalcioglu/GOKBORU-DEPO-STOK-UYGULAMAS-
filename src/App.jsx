@@ -457,7 +457,7 @@ function App() {
   };
 
   const handleExport = () => {
-    exportToExcel(inventory, transactions, maintenances, emanetler);
+    exportToExcel(inventory, transactions, maintenances, emanetler, savedTransactionNotes, savedMaintenanceNotes);
   };
 
   const handleImportClick = () => {
@@ -468,7 +468,7 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!window.confirm("Seçilen Excel dosyasındaki veriler tüm sistem verilerinin (stok, işlemler, bakımlar, emanetler) üzerine yazılacaktır. Devam etmek istiyor musunuz?")) {
+    if (!window.confirm("Seçilen Excel dosyasındaki veriler tüm sistem verilerinin (stok, işlemler, bakımlar, emanetler, notlar) üzerine yazılacaktır. Devam etmek istiyor musunuz?")) {
       if(fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -478,12 +478,15 @@ function App() {
       if (fullData.transactions) setTransactions(fullData.transactions);
       if (fullData.maintenances) setMaintenances(fullData.maintenances);
       if (fullData.emanetler) setEmanetler(fullData.emanetler);
+      if (fullData.savedTransactionNotes) setSavedTransactionNotes(fullData.savedTransactionNotes);
+      if (fullData.savedMaintenanceNotes) setSavedMaintenanceNotes(fullData.savedMaintenanceNotes);
       
       alert(`Excel başarıyla yüklendi! Tüm sistem verileri güncellendi.\n\n` +
-            `- ${fullData.inventory.length} Ürün\n` +
-            `- ${fullData.transactions.length} İşlem\n` +
-            `- ${fullData.maintenances.length} Bakım\n` +
-            `- ${fullData.emanetler.length} Emanet`);
+            `- ${fullData.inventory?.length || 0} Ürün\n` +
+            `- ${fullData.transactions?.length || 0} İşlem\n` +
+            `- ${fullData.maintenances?.length || 0} Bakım\n` +
+            `- ${fullData.emanetler?.length || 0} Emanet\n` +
+            `- ${(fullData.savedTransactionNotes?.length || 0) + (fullData.savedMaintenanceNotes?.length || 0)} Sistem Notu`);
             
       if(fileInputRef.current) fileInputRef.current.value = '';
     });
