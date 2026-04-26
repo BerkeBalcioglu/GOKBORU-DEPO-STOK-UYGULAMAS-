@@ -302,7 +302,7 @@ function App() {
 
       setInventory(nextInventory);
       setTransactions(prev => [newTransaction, ...prev]);
-      setActiveTab('inventory');
+      // setActiveTab('inventory'); // Kullanıcı isteği üzerine sayfa değiştirme kaldırıldı
       return true;
     }
 
@@ -633,7 +633,7 @@ function App() {
     };
     setTransactions(txs => [newTransaction, ...txs]);
     alert('Transfer işlemi başarıyla tamamlandı.');
-    setActiveTab('warehouses');
+    // setActiveTab('warehouses'); // Kullanıcı isteği üzerine sayfa değiştirme kaldırıldı
   };
 
   const handleDeductEmanet = (em, deductAmount) => {

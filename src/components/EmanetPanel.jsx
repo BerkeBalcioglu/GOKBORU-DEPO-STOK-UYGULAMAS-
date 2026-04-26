@@ -93,7 +93,7 @@ export default function EmanetPanel({ inventory, emanetler, onAdd, onReturn, onD
 
     // Reset all
     setPersonName(''); setPersonRegion(''); setItemsList([]);
-    setTab('list');
+    // setTab('list'); // Kullanıcı isteği üzerine yönlendirme iptal edildi
   };
 
   const aktif = emanetler.filter(e => e.status === 'aktif');
