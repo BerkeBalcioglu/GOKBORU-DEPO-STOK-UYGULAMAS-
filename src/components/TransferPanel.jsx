@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Move, Search, MapPin, ArrowRight, Package } from 'lucide-react';
 
-export default function TransferPanel({ inventory, onTransfer }) {
+export default function TransferPanel({ inventory, onTransfer, preselectedItem, clearPreselection }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
@@ -12,6 +12,17 @@ export default function TransferPanel({ inventory, onTransfer }) {
   const [targetWarehouse, setTargetWarehouse] = useState('');
   const [targetShelf, setTargetShelf] = useState('');
   const [amount, setAmount] = useState(1);
+
+  useEffect(() => {
+    if (preselectedItem) {
+      setSelectedItem(preselectedItem);
+      setSearchTerm(preselectedItem.name);
+      setTargetWarehouse('');
+      setTargetShelf('');
+      setAmount(preselectedItem.quantity);
+      if (clearPreselection) clearPreselection();
+    }
+  }, [preselectedItem, clearPreselection]);
 
   useEffect(() => {
     function handleClickOutside(event) {

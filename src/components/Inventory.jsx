@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ArrowUpDown, Clock } from 'lucide-react';
+import { Search, ArrowUpDown, Clock, Move } from 'lucide-react';
 
-export default function Inventory({ inventory, emanetler = [] }) {
+export default function Inventory({ inventory, emanetler = [], onInitiateTransfer }) {
   const [categoryFilter, setCategoryFilter] = useState('Hepsi');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState('lastUpdated'); // 'lastUpdated' | 'code'
@@ -297,15 +297,30 @@ export default function Inventory({ inventory, emanetler = [] }) {
                             <span style={{ fontSize: '0.85rem', color: '#fff' }}>📍 {loc.warehouse}</span>
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{loc.shelf}</span>
                           </div>
-                          <div style={{ 
-                            background: 'var(--accent-blue)', 
-                            color: '#fff', 
-                            padding: '2px 8px', 
-                            borderRadius: '6px', 
-                            fontSize: '0.8rem',
-                            fontWeight: 700 
-                          }}>
-                            {loc.quantity}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ 
+                              background: 'var(--accent-blue)', 
+                              color: '#fff', 
+                              padding: '2px 8px', 
+                              borderRadius: '6px', 
+                              fontSize: '0.8rem',
+                              fontWeight: 700 
+                            }}>
+                              {loc.quantity}
+                            </div>
+                            {onInitiateTransfer && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onInitiateTransfer(inventory.find(i => i.id === loc.id));
+                                }}
+                                className="btn btn-outline" 
+                                style={{ padding: '4px', minWidth: 'unset', border: 'none', background: 'rgba(255,255,255,0.1)' }}
+                                title="Bu konumu transfer et"
+                              >
+                                <Move size={14} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}

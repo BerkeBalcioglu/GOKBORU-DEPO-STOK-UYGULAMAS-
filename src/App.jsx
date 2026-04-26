@@ -69,6 +69,7 @@ function App() {
   const [savedTransactionNotes, setSavedTransactionNotes] = useState([]);
   const [savedMaintenanceNotes, setSavedMaintenanceNotes] = useState([]);
   const [emanetler, setEmanetler] = useState([]);
+  const [transferPreselect, setTransferPreselect] = useState(null);
   const fileInputRef = useRef(null);
 
   // Undo/Redo Refs & States
@@ -662,6 +663,11 @@ function App() {
     }
   };
 
+  const initiateTransfer = (item) => {
+    setTransferPreselect(item);
+    setActiveTab('transfer');
+  };
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'inventory', label: 'Stok Durumu', icon: <Package size={20} /> },
@@ -807,10 +813,10 @@ function App() {
 
         <div className="glass-panel" style={{ padding: '24px', minHeight: 'calc(100vh - 160px)' }}>
           {activeTab === 'dashboard' && <Dashboard inventory={inventory} transactions={transactions} maintenances={maintenances} />}
-          {activeTab === 'inventory' && <Inventory inventory={inventory} emanetler={emanetler} />}
+          {activeTab === 'inventory' && <Inventory inventory={inventory} emanetler={emanetler} onInitiateTransfer={initiateTransfer} />}
           {activeTab === 'warehouses' && <WarehousePanel inventory={inventory} />}
           {activeTab === 'transaction' && <TransactionForm inventory={inventory} onTransaction={handleTransaction} savedNotes={savedTransactionNotes} setSavedNotes={setSavedTransactionNotes} transactions={transactions} />}
-          {activeTab === 'transfer' && <TransferPanel inventory={inventory} onTransfer={handleTransfer} />}
+          {activeTab === 'transfer' && <TransferPanel inventory={inventory} onTransfer={handleTransfer} preselectedItem={transferPreselect} clearPreselection={() => setTransferPreselect(null)} />}
           {activeTab === 'maintenance' && <MaintenancePanel inventory={inventory} maintenances={maintenances} onAdd={handleAddMaintenance} onUpdate={handleUpdateMaintenance} onDelete={handleDeleteMaintenance} savedNotes={savedMaintenanceNotes} setSavedNotes={setSavedMaintenanceNotes} />}
           {activeTab === 'emanet' && <EmanetPanel inventory={inventory} emanetler={emanetler} onAdd={handleAddEmanet} onReturn={handleReturnEmanet} onDelete={handleDeleteEmanet} onDeduct={handleDeductEmanet} onBackup={handleBackup} onPull={handlePull} />}
           {activeTab === 'history' && <TransactionHistory transactions={transactions} />}
